@@ -8,6 +8,12 @@ type ServerConfig struct {
 	Port      int            `env:"GAZETTE_PORT,default=8080"`
 	SecretKey string         `env:"GAZETTE_SECRET_KEY,required"`
 	Database  PostgresConfig `env:"GAZETTE_POSTGRES"`
+	Redis     RedisConfig    `env:"GAZETTE_REDIS"`
+}
+
+type WorkerConfig struct {
+	Database PostgresConfig `env:"GAZETTE_POSTGRES"`
+	Redis    RedisConfig    `env:"GAZETTE_REDIS"`
 }
 
 type OAuthConfig struct {
@@ -27,9 +33,23 @@ type PostgresConfig struct {
 	SSLMode  string `env:"SSLMODE,default=disable"`
 }
 
-// Load loads the server configuration from environment variables.
-func Load() (ServerConfig, error) {
+type RedisConfig struct {
+	Addr     string `env:"ADDR,required"`
+	Username string `env:"USERNAME"`
+	Password string `env:"PASSWORD"`
+	DB       int    `env:"DB,default=0"`
+}
+
+// LoadServer loads the server configuration from environment variables.
+func LoadServer() (ServerConfig, error) {
 	var cfg ServerConfig
+	err := env.Unmarshal(&cfg)
+	return cfg, err
+}
+
+// LoadWorker loads the server configuration from environment variables.
+func LoadWorker() (WorkerConfig, error) {
+	var cfg WorkerConfig
 	err := env.Unmarshal(&cfg)
 	return cfg, err
 }

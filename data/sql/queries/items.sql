@@ -9,6 +9,17 @@ RETURNING
   id, feed_id, title, description, content, link, links, updated_parsed, published_parsed,
   authors, guid, image, categories, enclosures, created_at, updated_at;
 
+
+-- name: GetLastItem :one
+SELECT
+  id, feed_id, title, description, content, link, links,
+  updated_parsed, published_parsed, authors, guid, image,
+  categories, enclosures, created_at, updated_at
+FROM items
+WHERE feed_id = $1
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: GetItemByID :one
 SELECT
   id, feed_id, title, description, content, link, links, updated_parsed, published_parsed,

@@ -3,24 +3,29 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/mmcdole/gofeed"
 	"github.com/rhajizada/gazette/internal/repository"
+	"github.com/rhajizada/gazette/internal/tasks"
 	"github.com/rhajizada/gazette/internal/typeext"
 )
 
 // Handler encapsulates dependencies for HTTP handlers.
 type Handler struct {
 	Repo   repository.Queries
+	Client *asynq.Client
 	Secret []byte
 }
 
 // New creates a new Handler.
-func New(r *repository.Queries, secret []byte) *Handler {
+func New(r *repository.Queries, c *asynq.Client, secret []byte) *Handler {
 	return &Handler{
 		Repo:   *r,
+		Client: c,
 		Secret: secret,
 	}
 }
@@ -58,6 +63,7 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(body.FeedURL)
+	log.Printf("PublishedParsed: %s", feed.PublishedParsed)
 	if err != nil {
 		msg := fmt.Sprintf("invalid feed URL: %v", err)
 		http.Error(w, msg, http.StatusBadRequest)
@@ -88,6 +94,22 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
+	task, err := tasks.NewFeedSyncTask(data.ID)
+	if err != nil {
+		h.Repo.DeleteFeedByID(r.Context(), data.ID)
+		msg := fmt.Sprintf("failed marshalling sync task: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	ti, err := h.Client.Enqueue(task)
+	if err != nil {
+		h.Repo.DeleteFeedByID(r.Context(), data.ID)
+		msg := fmt.Sprintf("failed queuing sync task: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	log.Printf("queued sync task %s for feed %s", ti.ID, data.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {

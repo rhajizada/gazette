@@ -17,6 +17,7 @@ type Querier interface {
 	DeleteItemByID(ctx context.Context, id uuid.UUID) error
 	GetFeedByID(ctx context.Context, id uuid.UUID) (Feed, error)
 	GetItemByID(ctx context.Context, id uuid.UUID) (Item, error)
+	GetLastItem(ctx context.Context, feedID uuid.UUID) (Item, error)
 	ListFeeds(ctx context.Context, arg ListFeedsParams) ([]Feed, error)
 	ListItemsByFeedID(ctx context.Context, arg ListItemsByFeedIDParams) ([]Item, error)
 	UpdateFeedByID(ctx context.Context, arg UpdateFeedByIDParams) (Feed, error)

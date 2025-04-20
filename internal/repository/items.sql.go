@@ -121,6 +121,41 @@ func (q *Queries) GetItemByID(ctx context.Context, id uuid.UUID) (Item, error) {
 	return i, err
 }
 
+const getLastItem = `-- name: GetLastItem :one
+SELECT
+  id, feed_id, title, description, content, link, links,
+  updated_parsed, published_parsed, authors, guid, image,
+  categories, enclosures, created_at, updated_at
+FROM items
+WHERE feed_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLastItem(ctx context.Context, feedID uuid.UUID) (Item, error) {
+	row := q.db.QueryRow(ctx, getLastItem, feedID)
+	var i Item
+	err := row.Scan(
+		&i.ID,
+		&i.FeedID,
+		&i.Title,
+		&i.Description,
+		&i.Content,
+		&i.Link,
+		&i.Links,
+		&i.UpdatedParsed,
+		&i.PublishedParsed,
+		&i.Authors,
+		&i.Guid,
+		&i.Image,
+		&i.Categories,
+		&i.Enclosures,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listItemsByFeedID = `-- name: ListItemsByFeedID :many
 SELECT
   id, feed_id, title, description, content, link, links, updated_parsed, published_parsed,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rhajizada/gazette/internal/config"
 )
@@ -21,4 +22,15 @@ func CreatePool(c *config.PostgresConfig) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 	return pool, nil
+}
+
+// CreateRedisClient create Redis Client connection for asynq
+func CreateRedisClient(c *config.RedisConfig) *asynq.RedisClientOpt {
+	conn := asynq.RedisClientOpt{
+		Addr:     c.Addr,
+		Username: c.Username,
+		Password: c.Password,
+		DB:       c.DB,
+	}
+	return &conn
 }
