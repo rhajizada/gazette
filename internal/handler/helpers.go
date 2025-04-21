@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-
-	"github.com/rhajizada/gazette/internal/repository"
 )
 
 const MAX_LIMIT = 100
 
-func getListFeedsParams(v url.Values) (repository.ListFeedsParams, error) {
-	var params repository.ListFeedsParams
+func getPageParams(v url.Values) (PageParams, error) {
+	var params PageParams
 	limit := v.Get("limit")
 	offset := v.Get("offset")
 	limitAsInt64, err := strconv.ParseInt(limit, 10, 32)

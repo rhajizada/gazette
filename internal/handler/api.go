@@ -34,7 +34,7 @@ func New(r *repository.Queries, c *asynq.Client, secret []byte) *Handler {
 
 func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
-	params, err := getListFeedsParams(v)
+	params, err := getPageParams(v)
 	if err != nil {
 		msg := fmt.Sprintf("failed listing feeds: %v", err)
 		http.Error(w, msg, http.StatusBadRequest)
@@ -59,7 +59,11 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	data, err := h.Repo.ListFeeds(r.Context(), params)
+	data, err := h.Repo.ListFeeds(r.Context(),
+		repository.ListFeedsParams{
+			Limit:  params.Limit,
+			Offset: params.Offset,
+		})
 	if err != nil {
 		msg := fmt.Sprintf("failed listing feeds: %v", err)
 		http.Error(w, msg, http.StatusInternalServerError)
@@ -185,4 +189,61 @@ func (h *Handler) DeleteFeedByID(w http.ResponseWriter, r *http.Request) {
 	h.Repo.DeleteFeedByID(r.Context(), feedUUID)
 	msg := fmt.Sprintf("successfully deleted feed %v", feedID)
 	w.Write([]byte(msg))
+}
+
+func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
+	feedID := r.PathValue("feedID")
+	if feedID == "" {
+		http.Error(w, "missing 'id' parameter", http.StatusBadRequest)
+		return
+	}
+	feedUUID, err := uuid.Parse(feedID)
+	if err != nil {
+		http.Error(w, "cannot parse 'id' parameter", http.StatusInternalServerError)
+		return
+	}
+	v := r.URL.Query()
+	params, err := getPageParams(v)
+	if err != nil {
+		msg := fmt.Sprintf("failed listing feeds: %v", err)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+	var response ListItemsResponse
+	response.Limit = params.Limit
+	response.Offset = response.Offset
+	count, err := h.Repo.CountItemsByFeedID(r.Context(), feedUUID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		msg := fmt.Sprintf("failed listing items: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	response.TotalCount = count
+	if count == 0 {
+		response.Items = make([]repository.Item, 0)
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		return
+	}
+	data, err := h.Repo.ListItemsByFeedID(r.Context(),
+		repository.ListItemsByFeedIDParams{
+			FeedID: feedUUID,
+			Limit:  params.Limit,
+			Offset: params.Offset,
+		})
+	if err != nil {
+		msg := fmt.Sprintf("failed listing feeds: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	response.Items = data
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

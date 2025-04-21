@@ -27,13 +27,18 @@ SELECT
 FROM items
 WHERE id = $1;
 
+-- name: CountItemsByFeedID :one
+SELECT COUNT(*) AS count
+FROM items
+WHERE feed_id = $1;
+
 -- name: ListItemsByFeedID :many
 SELECT
   id, feed_id, title, description, content, link, links, updated_parsed, published_parsed,
   authors, guid, image, categories, enclosures, created_at, updated_at
 FROM items
 WHERE feed_id = $1
-ORDER BY created_at DESC
+ORDER BY published_parsed DESC
 LIMIT  $2
 OFFSET $3;
 

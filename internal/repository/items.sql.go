@@ -14,6 +14,19 @@ import (
 	typeext "github.com/rhajizada/gazette/internal/typeext"
 )
 
+const countItemsByFeedID = `-- name: CountItemsByFeedID :one
+SELECT COUNT(*) AS count
+FROM items
+WHERE feed_id = $1
+`
+
+func (q *Queries) CountItemsByFeedID(ctx context.Context, feedID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countItemsByFeedID, feedID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createItem = `-- name: CreateItem :one
 INSERT INTO items
   (feed_id, title, description, content, link, links, updated_parsed, published_parsed,
@@ -162,7 +175,7 @@ SELECT
   authors, guid, image, categories, enclosures, created_at, updated_at
 FROM items
 WHERE feed_id = $1
-ORDER BY created_at DESC
+ORDER BY published_parsed DESC
 LIMIT  $2
 OFFSET $3
 `

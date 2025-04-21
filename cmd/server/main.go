@@ -69,7 +69,7 @@ func main() {
 
 	r := http.NewServeMux()
 	feeds := router.RegisterFeedRoutes(h)
-	r.Handle("/api/feeds", http.StripPrefix("/api", feeds))
+	r.Handle("/api/feeds/", http.StripPrefix("/api", feeds))
 	lm := middleware.Logging(r)
 
 	// Start the server
