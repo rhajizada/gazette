@@ -22,7 +22,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.LoadServer()
+	cfg, err := config.LoadScheduler()
 	if err != nil {
 		log.Panicf("error loading config: %v", err)
 	}
