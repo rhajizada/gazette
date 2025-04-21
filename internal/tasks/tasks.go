@@ -8,11 +8,16 @@ import (
 )
 
 const (
+	TypeDataSync = "data:sync"
 	TypeFeedSync = "feed:sync"
 )
 
 type FeedSyncPayload struct {
 	FeedID uuid.UUID
+}
+
+func NewDataSyncTask() (*asynq.Task, error) {
+	return asynq.NewTask(TypeDataSync, nil), nil
 }
 
 func NewFeedSyncTask(feedID uuid.UUID) (*asynq.Task, error) {
