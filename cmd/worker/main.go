@@ -24,7 +24,7 @@ func main() {
 
 	// If the version flag is provided, print version info and exit.
 	if *versionFlag {
-		fmt.Printf("Gazette %s\n", Version)
+		fmt.Printf("Gazette worker %s\n", Version)
 		os.Exit(0)
 	}
 
@@ -72,6 +72,6 @@ func main() {
 	mux.HandleFunc(tasks.TypeFeedSync, h.HandleFeedSync)
 
 	if err := srv.Run(mux); err != nil {
-		log.Panicf("could not run server: %v", err)
+		log.Panicf("could not run worker: %v", err)
 	}
 }

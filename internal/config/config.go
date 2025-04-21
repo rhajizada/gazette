@@ -1,55 +1,73 @@
 package config
 
 import (
-	"github.com/syntaqx/env"
+	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type ServerConfig struct {
-	Port      int            `env:"GAZETTE_PORT,default=8080"`
-	SecretKey string         `env:"GAZETTE_SECRET_KEY,required"`
-	Database  PostgresConfig `env:"GAZETTE_POSTGRES"`
-	Redis     RedisConfig    `env:"GAZETTE_REDIS"`
-}
-
-type WorkerConfig struct {
-	Database PostgresConfig `env:"GAZETTE_POSTGRES"`
-	Redis    RedisConfig    `env:"GAZETTE_REDIS"`
-}
-
-type OAuthConfig struct {
-	ProviderURL  string `env:"PROVIDER_URL"`
-	ProviderName string `env:"PROVIDER_NAME"`
-	RedirectURL  string `env:"REDIRECT_URL"`
-	ClientID     string `env:"CLIENT_ID"`
-	ClientSecret string `env:"CLIENT_SECRET"`
-}
-
-type PostgresConfig struct {
-	Host     string `env:"HOST,required"`
-	Port     int    `env:"PORT,default=5432"`
-	User     string `env:"USER,required"`
-	Password string `env:"PASSWORD,required"`
-	DBName   string `env:"DBNAME,required"`
-	SSLMode  string `env:"SSLMODE,default=disable"`
-}
-
+// RedisConfig holds Redis settings loaded from environment variables.
 type RedisConfig struct {
-	Addr     string `env:"ADDR,required"`
-	Username string `env:"USERNAME"`
-	Password string `env:"PASSWORD"`
-	DB       int    `env:"DB,default=0"`
+	Addr     string `env:"GAZETTE_REDIS_ADDR" env-required`
+	Username string `env:"GAZETTE_REDIS_USERNAME"`
+	Password string `env:"GAZETTE_REDIS_PASSWORD"`
+	DB       int    `env:"GAZETTE_REDIS_DB" env-default:"0"`
 }
 
-// LoadServer loads the server configuration from environment variables.
-func LoadServer() (ServerConfig, error) {
+// PostgresConfig holds Postgres settings loaded from environment variables.
+type PostgresConfig struct {
+	Host     string `env:"GAZETTE_POSTGRES_HOST" env-required`
+	Port     int    `env:"GAZETTE_POSTGRES_PORT" env-default:"5432"`
+	User     string `env:"GAZETTE_POSTGRES_USER" env-required`
+	Password string `env:"GAZETTE_POSTGRES_PASSWORD" env-required`
+	DBName   string `env:"GAZETTE_POSTGRES_DBNAME" env-required`
+	SSLMode  string `env:"GAZETTE_POSTGRES_SSLMODE" env-default:"disable"`
+}
+
+// ServerConfig holds server-related settings.
+type ServerConfig struct {
+	Port      int    `env:"GAZETTE_PORT" env-default:"8080"`
+	SecretKey string `env:"GAZETTE_SECRET_KEY" env-required`
+	Database  PostgresConfig
+	Redis     RedisConfig
+}
+
+// WorkerConfig holds worker-related settings.
+type WorkerConfig struct {
+	Database PostgresConfig
+	Redis    RedisConfig
+}
+
+// SchedulerConfig holds scheduler-related settings.
+type SchedulerConfig struct {
+	Redis             RedisConfig
+	HeartbeatInterval time.Duration  `env:"GAZETTE_HEARTBEAT_INTERVAL" env-default:"30s"`
+	Location          *time.Location `env:"GAZETTE_LOCATION" env-default:"UTC"`
+}
+
+// LoadServer populates ServerConfig from environment variables prefixed with GAZETTE_.
+func LoadServer() (*ServerConfig, error) {
 	var cfg ServerConfig
-	err := env.Unmarshal(&cfg)
-	return cfg, err
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
 
-// LoadWorker loads the server configuration from environment variables.
-func LoadWorker() (WorkerConfig, error) {
+// LoadWorker populates WorkerConfig from environment variables prefixed with GAZETTE_.
+func LoadWorker() (*WorkerConfig, error) {
 	var cfg WorkerConfig
-	err := env.Unmarshal(&cfg)
-	return cfg, err
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// LoadScheduler populates SchedulerConfig from environment variables prefixed with GAZETTE_.
+func LoadScheduler() (*SchedulerConfig, error) {
+	var cfg SchedulerConfig
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
