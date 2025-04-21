@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gazette
+      POSTGRES_USER: gazette
+      POSTGRES_PASSWORD: Password@123
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/server/Dockerfile
+    environment:
+      GAZETTE_PORT: "8080"
+      GAZETTE_SECRET_KEY: "b5a6fd72b5e4ad4de359aa8f4200098a"
+      GAZETTE_POSTGRES_HOST: "postgres"
+      GAZETTE_POSTGRES_USER: "gazette"
+      GAZETTE_POSTGRES_PASSWORD: "Password@123"
+      GAZETTE_POSTGRES_DBNAME: "gazette"
+      GAZETTE_REDIS_ADDR: "redis:6379"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    environment:
+      GAZETTE_POSTGRES_HOST: "postgres"
+      GAZETTE_POSTGRES_USER: "gazette"
+      GAZETTE_POSTGRES_PASSWORD: "Password@123"
+      GAZETTE_POSTGRES_DBNAME: "gazette"
+      GAZETTE_REDIS_ADDR: "redis:6379"
+    depends_on:
+      - postgres
+      - redis
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/scheduler/Dockerfile
+    environment:
+      GAZETTE_REDIS_ADDR: "redis:6379"
+    depends_on:
+      - redis
