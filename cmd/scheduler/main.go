@@ -27,7 +27,15 @@ func main() {
 		log.Panicf("error loading config: %v", err)
 	}
 	conn := database.CreateRedisClient(&cfg.Redis)
-	scheduler := asynq.NewScheduler(conn, nil)
+	scheduler := asynq.NewScheduler(conn, &asynq.SchedulerOpts{
+		HeartbeatInterval: cfg.HeartbeatInterval,
+		Location:          cfg.Location,
+	})
+
+	err = scheduler.Ping()
+	if err != nil {
+		log.Panicf("failed to initialze scheduler: %v", err)
+	}
 
 	if err := scheduler.Run(); err != nil {
 		log.Panicf("could not run scheduler: %v", err)
