@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CountFeeds(ctx context.Context) (int64, error)
 	CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	DeleteFeedByID(ctx context.Context, id uuid.UUID) error

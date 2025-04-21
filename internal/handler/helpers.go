@@ -2,11 +2,14 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strconv"
 
 	"github.com/rhajizada/gazette/internal/repository"
 )
+
+const MAX_LIMIT = 100
 
 func getListFeedsParams(v url.Values) (repository.ListFeedsParams, error) {
 	var params repository.ListFeedsParams
@@ -17,6 +20,10 @@ func getListFeedsParams(v url.Values) (repository.ListFeedsParams, error) {
 		return params, errors.New("invalid limit type")
 	}
 	limitAsInt32 := int32(limitAsInt64)
+	if limitAsInt32 > MAX_LIMIT {
+		msg := fmt.Sprintf("max limit size is %d", MAX_LIMIT)
+		return params, errors.New(msg)
+	}
 	offsetAsInt64, err := strconv.ParseInt(offset, 10, 32)
 	if err != nil {
 		return params, errors.New("invalid offset type")

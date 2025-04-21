@@ -14,6 +14,18 @@ import (
 	typeext "github.com/rhajizada/gazette/internal/typeext"
 )
 
+const countFeeds = `-- name: CountFeeds :one
+SELECT COUNT(*) AS count
+FROM feeds
+`
+
+func (q *Queries) CountFeeds(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countFeeds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createFeed = `-- name: CreateFeed :one
 INSERT INTO feeds
   (title, description, link, feed_link, links, updated_parsed, published_parsed,

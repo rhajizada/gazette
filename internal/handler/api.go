@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -38,15 +40,35 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
+	var response ListFeedsResponse
+	response.Limit = params.Limit
+	response.Offset = response.Offset
+	count, err := h.Repo.CountFeeds(r.Context())
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		msg := fmt.Sprintf("failed listing feeds: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	response.TotalCount = count
+	if count == 0 {
+		response.Feeds = make([]repository.Feed, 0)
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		return
+	}
 	data, err := h.Repo.ListFeeds(r.Context(), params)
 	if err != nil {
 		msg := fmt.Sprintf("failed listing feeds: %v", err)
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
+	response.Feeds = data
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -12,6 +12,10 @@ RETURNING
   authors, language, image, copyright, generator,
   categories, feed_type, feed_version, created_at, last_updated_at;
 
+-- name: CountFeeds :one
+SELECT COUNT(*) AS count
+FROM feeds;
+
 -- name: GetFeedByID :one
 SELECT
   id, title, description, link, feed_link, links, updated_parsed, published_parsed,
