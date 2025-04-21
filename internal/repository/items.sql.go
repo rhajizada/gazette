@@ -141,7 +141,7 @@ SELECT
   categories, enclosures, created_at, updated_at
 FROM items
 WHERE feed_id = $1
-ORDER BY created_at DESC
+ORDER BY published_parsed DESC
 LIMIT 1
 `
 

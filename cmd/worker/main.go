@@ -67,8 +67,9 @@ func main() {
 
 	srv := asynq.NewServer(conn, asynq.Config{})
 
-	h := tasks.NewHandler(rq)
+	h := tasks.NewHandler(rq, &c)
 	mux := asynq.NewServeMux()
+	mux.HandleFunc(tasks.TypeDataSync, h.HandleDataSync)
 	mux.HandleFunc(tasks.TypeFeedSync, h.HandleFeedSync)
 
 	if err := srv.Run(mux); err != nil {

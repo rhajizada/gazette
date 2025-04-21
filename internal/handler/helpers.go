@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-const MAX_LIMIT = 100
+const MaxLimit = 100
 
 func getPageParams(v url.Values) (PageParams, error) {
 	var params PageParams
@@ -18,8 +18,8 @@ func getPageParams(v url.Values) (PageParams, error) {
 		return params, errors.New("invalid limit type")
 	}
 	limitAsInt32 := int32(limitAsInt64)
-	if limitAsInt32 > MAX_LIMIT {
-		msg := fmt.Sprintf("max limit size is %d", MAX_LIMIT)
+	if limitAsInt32 > MaxLimit {
+		msg := fmt.Sprintf("max limit size is %d", MaxLimit)
 		return params, errors.New(msg)
 	}
 	offsetAsInt64, err := strconv.ParseInt(offset, 10, 32)
