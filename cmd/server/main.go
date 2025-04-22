@@ -68,7 +68,9 @@ func main() {
 
 	r := http.NewServeMux()
 	feeds := router.RegisterFeedRoutes(h)
+	items := router.RegisterItemRoutes(h)
 	r.Handle("/api/feeds/", http.StripPrefix("/api", feeds))
+	r.Handle("/api/items/", http.StripPrefix("/api", items))
 	lm := middleware.Logging(r)
 
 	// Start the server

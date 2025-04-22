@@ -13,5 +13,6 @@ func RegisterFeedRoutes(h *handler.Handler) *http.ServeMux {
 	router.HandleFunc("GET /feeds/{feedID}", h.GetFeedByID)
 	router.HandleFunc("DELETE /feeds/{feedID}", h.DeleteFeedByID)
 	router.HandleFunc("GET /feeds/{feedID}/items", h.ListItemsByFeedID)
+	router.HandleFunc("GET /items/{itemID}", h.GetItemByID)
 	return router
 }
