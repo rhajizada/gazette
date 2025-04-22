@@ -4,6 +4,19 @@ vars:
   name: gazette
 
 tasks:
+  build:
+    desc: Build from source
+    vars:
+      app: '{{.app | default "server"}}'
+      version:
+        sh: git rev-parse --short HEAD
+    preconditions:
+      - sh: '[ "{{.app}}" = "server" ] || [ "{{.app}}" = "worker" ] || [ "{{.app}}" = "scheduler" ]'
+        msg: "❌ Error: invalid app '{{.app}}', valid options are server, worker, or scheduler."
+    cmds:
+      - |
+        go build -ldflags "-X main.Version={{.version}}" -o bin/{{.app}} ./cmd/{{.app}}
+
   build-image:
     desc: Build Docker image for the given app
     vars:

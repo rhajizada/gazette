@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("Gazette scheduler %s\n", Version)
+		fmt.Printf("Gazette Scheduler version %s\n", Version)
 		os.Exit(0)
 	}
 
