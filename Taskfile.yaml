@@ -21,13 +21,28 @@ tasks:
     desc: Build Docker image for the given app
     vars:
       app: '{{.app | default "server"}}'
+      version:
+        sh: git rev-parse --short HEAD
     preconditions:
-      - sh: '[ "{{.app}}" = "server" ] || [ "{{.app}}" = "worker" ] || [ "{{.app}}" = "scheduler" ]]'
+      - sh: '[ "{{.app}}" = "server" ] || [ "{{.app}}" = "worker" ] || [ "{{.app}}" = "scheduler" ]'
         msg: "❌ Error: invalid app '{{.app}}', valid options are server, worker, or scheduler."
     cmds:
       - |
         docker build \
+         --build-arg VERSION={{.version}} \
          -f docker/{{.app}}/Dockerfile \
          -t {{.name}}-{{.app}} \
          .
+    dir: ./
+
+  compose:
+    desc: Docker compose
+    vars:
+      version:
+        sh: git rev-parse --short HEAD
+    cmds:
+      - |
+        docker compose {{.CLI_ARGS}}
+    env:
+      GAZETTE_VERSION: "{{ .version }}"
     dir: ./

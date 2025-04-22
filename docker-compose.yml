@@ -19,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: docker/server/Dockerfile
+      args:
+        VERSION: "${GAZETTE_VERSION:-dev}"
     environment:
       GAZETTE_PORT: "8080"
       GAZETTE_SECRET_KEY: "b5a6fd72b5e4ad4de359aa8f4200098a"
@@ -37,6 +39,8 @@ services:
     build:
       context: .
       dockerfile: docker/worker/Dockerfile
+      args:
+        VERSION: "${GAZETTE_VERSION:-dev}"
     environment:
       GAZETTE_POSTGRES_HOST: "postgres"
       GAZETTE_POSTGRES_USER: "gazette"
@@ -51,6 +55,8 @@ services:
     build:
       context: .
       dockerfile: docker/scheduler/Dockerfile
+      args:
+        VERSION: "${GAZETTE_VERSION:-dev}"
     environment:
       GAZETTE_REDIS_ADDR: "redis:6379"
     depends_on:
