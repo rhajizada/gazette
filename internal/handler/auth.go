@@ -36,7 +36,8 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	oauthToken, err := h.OAuth.Exchange(r.Context(), r.URL.Query().Get("code"))
 	if err != nil {
-		http.Error(w, "token exchange failed: "+err.Error(), http.StatusInternalServerError)
+		msg := fmt.Sprintf("token exchange failed: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 
