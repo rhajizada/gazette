@@ -10,9 +10,9 @@ import (
 )
 
 // CreatePool creates a *pgxpool.Pool instance using pgx/v5.
-func CreatePool(c *config.PostgresConfig) (*pgxpool.Pool, error) {
+func CreatePool(cfg *config.PostgresConfig) (*pgxpool.Pool, error) {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.User, c.Password, c.Host, c.Port, c.DBName, c.SSLMode)
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode)
 	pool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		return nil, err
@@ -25,12 +25,12 @@ func CreatePool(c *config.PostgresConfig) (*pgxpool.Pool, error) {
 }
 
 // CreateRedisClient create Redis Client connection for asynq
-func CreateRedisClient(c *config.RedisConfig) *asynq.RedisClientOpt {
+func CreateRedisClient(cfg *config.RedisConfig) *asynq.RedisClientOpt {
 	conn := asynq.RedisClientOpt{
-		Addr:     c.Addr,
-		Username: c.Username,
-		Password: c.Password,
-		DB:       c.DB,
+		Addr:     cfg.Addr,
+		Username: cfg.Username,
+		Password: cfg.Password,
+		DB:       cfg.DB,
 	}
 	return &conn
 }

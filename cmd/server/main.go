@@ -14,6 +14,7 @@ import (
 	"github.com/rhajizada/gazette/internal/database"
 	"github.com/rhajizada/gazette/internal/handler"
 	"github.com/rhajizada/gazette/internal/middleware"
+	"github.com/rhajizada/gazette/internal/oauth"
 	"github.com/rhajizada/gazette/internal/repository"
 	"github.com/rhajizada/gazette/internal/router"
 )
@@ -63,14 +64,27 @@ func main() {
 		log.Panicf("failed to connect to Redis: %v", err)
 	}
 
+	v, err := oauth.GetVerifier(&cfg.OAuth)
+	if err != nil {
+		log.Panicf("failed to initialize auth provider: %v", err)
+	}
+
+	oauthCfg, err := oauth.GetConfig(&cfg.OAuth)
+	if err != nil {
+		log.Panicf("failed to initialize auth provider: %v", err)
+	}
+
 	// Create handler
-	h := handler.New(rq, &c, []byte(cfg.SecretKey))
+	h := handler.New(rq, &c, []byte(cfg.SecretKey), v, oauthCfg)
 
 	r := http.NewServeMux()
 	feeds := router.RegisterFeedRoutes(h)
 	items := router.RegisterItemRoutes(h)
+	auth := router.RegisterAuthRoutes(h)
+
 	r.Handle("/api/feeds/", http.StripPrefix("/api", feeds))
 	r.Handle("/api/items/", http.StripPrefix("/api", items))
+	r.Handle("/auth/", http.StripPrefix("/auth", auth))
 	lm := middleware.Logging(r)
 
 	// Start the server

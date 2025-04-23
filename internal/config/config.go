@@ -30,6 +30,14 @@ type ServerConfig struct {
 	SecretKey string `env:"GAZETTE_SECRET_KEY" env-required`
 	Database  PostgresConfig
 	Redis     RedisConfig
+	OAuth     OAuthConfig
+}
+
+type OAuthConfig struct {
+	ClientID     string `env:"GAZETTE_OAUTH_CLIENT_ID" env-required`
+	ClientSecret string `env:"GAZETTE_OAUTH_CLIENT_SECRET" env-required`
+	IssuerURL    string `env:"GAZETTE_OAUTH_ISSUER_URL" env-required`
+	RedirectURL  string `env:"GAZETTE_OAUTH_REDIRECT_URL" env-required`
 }
 
 // WorkerConfig holds worker-related settings.
