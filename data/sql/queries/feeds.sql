@@ -24,6 +24,14 @@ SELECT
 FROM feeds
 WHERE id = $1;
 
+-- name: GetFeedByFeedLink :one
+SELECT
+  id, title, description, link, feed_link, links, updated_parsed, published_parsed,
+  authors, language, image, copyright, generator,
+  categories, feed_type, feed_version, created_at, last_updated_at
+FROM feeds
+WHERE feed_link = $1;
+
 -- name: ListFeeds :many
 SELECT
   id, title, description, link, feed_link, links, updated_parsed, published_parsed,
@@ -61,3 +69,37 @@ RETURNING
 
 -- name: DeleteFeedByID :exec
 DELETE FROM feeds WHERE id = $1;
+
+-- name: CountFeedsByUserID :one
+SELECT COUNT(*) AS count
+FROM user_feeds
+WHERE user_id = $1;
+
+-- name: ListFeedsByUserID :many
+SELECT
+  f.id, f.title, f.description, f.link, f.feed_link, f.links,
+  f.updated_parsed, f.published_parsed,
+  f.authors, f.language, f.image, f.copyright, f.generator,
+  f.categories, f.feed_type, f.feed_version,
+  f.created_at, f.last_updated_at,
+  uf.subscribed_at
+FROM feeds f
+JOIN user_feeds uf ON uf.feed_id = f.id
+WHERE uf.user_id = $1
+ORDER BY f.created_at DESC
+LIMIT  $2
+OFFSET $3;
+
+-- name: GetUserFeedByID :one
+SELECT
+  f.id, f.title, f.description, f.link, f.feed_link, f.links,
+  f.updated_parsed, f.published_parsed,
+  f.authors, f.language, f.image, f.copyright, f.generator,
+  f.categories, f.feed_type, f.feed_version,
+  f.created_at, f.last_updated_at,
+  uf.subscribed_at
+FROM feeds f
+JOIN user_feeds uf ON uf.feed_id = f.id
+WHERE uf.user_id = $1
+  AND f.id      = $2;
+

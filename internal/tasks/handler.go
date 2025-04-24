@@ -74,28 +74,29 @@ func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
 func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 	var p FeedSyncPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
-		return fmt.Errorf("json.Unmarshal failed: %w", asynq.SkipRetry)
+		return fmt.Errorf("json.Unmarshal failed: %v", asynq.SkipRetry)
 	}
 	feedID := p.FeedID
 
 	data, err := h.Repo.GetFeedByID(ctx, feedID)
 	if err != nil {
-		return fmt.Errorf("failed fetching feed %q: %w", feedID, err)
+		return fmt.Errorf("failed fetching feed %q: %v", feedID, err)
 	}
 
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(data.FeedLink)
 	if err != nil {
-		return fmt.Errorf("failed parsing feed %q: %w", feedID, err)
+		return fmt.Errorf("failed parsing feed %q: %v", feedID, err)
 	}
 
 	lastItem, err := h.Repo.GetLastItem(ctx, feedID)
 	var itemsToSync []*gofeed.Item
+	// TODO: revisit this
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			itemsToSync = feed.Items
 		} else {
-			return fmt.Errorf("failed fetching last item for feed %q: %w", feedID, err)
+			return fmt.Errorf("failed fetching last item for feed %q: %v", feedID, err)
 		}
 	} else {
 		cutoff := *lastItem.PublishedParsed
@@ -124,7 +125,7 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 			Enclosures:      typeext.Enclosures(itm.Enclosures),
 		})
 		if err != nil {
-			return fmt.Errorf("failed creating item %q for feed %q: %w", itm.GUID, feedID, err)
+			return fmt.Errorf("failed creating item %q for feed %q: %v", itm.GUID, feedID, err)
 		}
 		log.Printf("synced item %s from feed %s", itm.GUID, feedID)
 	}

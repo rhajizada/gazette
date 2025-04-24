@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rhajizada/gazette/internal/oauth"
+	"github.com/rhajizada/gazette/internal/repository"
 )
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -53,15 +56,41 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var claims oauth.Claims
+	var claims oauth.ProviderClaims
 	if err := idToken.Claims(&claims); err != nil {
-		http.Error(w, "could not parse claims: "+err.Error(), http.StatusInternalServerError)
+		msg := fmt.Sprintf("could not parse claims: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
+	}
+
+	user, err := h.Repo.GetUserBySub(r.Context(), claims.Sub)
+	userExists := true
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			userExists = false
+		} else {
+			msg := fmt.Sprintf("failed fetching user: %v", err)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if !userExists {
+		user, err = h.Repo.CreateUser(r.Context(), repository.CreateUserParams{
+			Sub:   claims.Sub,
+			Name:  claims.Name,
+			Email: claims.Email,
+		})
+		if err != nil {
+			msg := fmt.Sprintf("failed creating user: %v", err)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
 	}
 
 	appToken, err := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
-		claims.GetJwtMap(time.Hour),
+		claims.GetAppClaims(user.ID, time.Hour),
 	).SignedString(h.Secret)
 	if err != nil {
 		msg := fmt.Sprintf("failed to sign app token: %v", err)
@@ -72,7 +101,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "app_jwt",
 		Value:    appToken,
-		Path:     "/api/feeds/",
+		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   3600,
 	})

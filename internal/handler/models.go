@@ -12,10 +12,10 @@ type CreateFeedRequest struct {
 }
 
 type ListFeedsResponse struct {
-	Limit      int32             `json:"limit"`
-	Offset     int32             `json:"offset"`
-	TotalCount int64             `json:"totalCount"`
-	Feeds      []repository.Feed `json:"feeds"`
+	Limit      int32                             `json:"limit"`
+	Offset     int32                             `json:"offset"`
+	TotalCount int64                             `json:"totalCount"`
+	Feeds      []repository.ListFeedsByUserIDRow `json:"feeds"`
 }
 
 type ListItemsResponse struct {

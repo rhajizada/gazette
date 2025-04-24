@@ -26,6 +26,19 @@ func (q *Queries) CountFeeds(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countFeedsByUserID = `-- name: CountFeedsByUserID :one
+SELECT COUNT(*) AS count
+FROM user_feeds
+WHERE user_id = $1
+`
+
+func (q *Queries) CountFeedsByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countFeedsByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createFeed = `-- name: CreateFeed :one
 INSERT INTO feeds
   (title, description, link, feed_link, links, updated_parsed, published_parsed,
@@ -110,6 +123,41 @@ func (q *Queries) DeleteFeedByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getFeedByFeedLink = `-- name: GetFeedByFeedLink :one
+SELECT
+  id, title, description, link, feed_link, links, updated_parsed, published_parsed,
+  authors, language, image, copyright, generator,
+  categories, feed_type, feed_version, created_at, last_updated_at
+FROM feeds
+WHERE feed_link = $1
+`
+
+func (q *Queries) GetFeedByFeedLink(ctx context.Context, feedLink string) (Feed, error) {
+	row := q.db.QueryRow(ctx, getFeedByFeedLink, feedLink)
+	var i Feed
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Link,
+		&i.FeedLink,
+		&i.Links,
+		&i.UpdatedParsed,
+		&i.PublishedParsed,
+		&i.Authors,
+		&i.Language,
+		&i.Image,
+		&i.Copyright,
+		&i.Generator,
+		&i.Categories,
+		&i.FeedType,
+		&i.FeedVersion,
+		&i.CreatedAt,
+		&i.LastUpdatedAt,
+	)
+	return i, err
+}
+
 const getFeedByID = `-- name: GetFeedByID :one
 SELECT
   id, title, description, link, feed_link, links, updated_parsed, published_parsed,
@@ -141,6 +189,74 @@ func (q *Queries) GetFeedByID(ctx context.Context, id uuid.UUID) (Feed, error) {
 		&i.FeedVersion,
 		&i.CreatedAt,
 		&i.LastUpdatedAt,
+	)
+	return i, err
+}
+
+const getUserFeedByID = `-- name: GetUserFeedByID :one
+SELECT
+  f.id, f.title, f.description, f.link, f.feed_link, f.links,
+  f.updated_parsed, f.published_parsed,
+  f.authors, f.language, f.image, f.copyright, f.generator,
+  f.categories, f.feed_type, f.feed_version,
+  f.created_at, f.last_updated_at,
+  uf.subscribed_at
+FROM feeds f
+JOIN user_feeds uf ON uf.feed_id = f.id
+WHERE uf.user_id = $1
+  AND f.id      = $2
+`
+
+type GetUserFeedByIDParams struct {
+	UserID uuid.UUID `json:"userId"`
+	ID     uuid.UUID `json:"id"`
+}
+
+type GetUserFeedByIDRow struct {
+	ID              uuid.UUID       `json:"id"`
+	Title           *string         `json:"title"`
+	Description     *string         `json:"description"`
+	Link            *string         `json:"link"`
+	FeedLink        string          `json:"feedLink"`
+	Links           []string        `json:"links"`
+	UpdatedParsed   *time.Time      `json:"updatedParsed"`
+	PublishedParsed *time.Time      `json:"publishedParsed"`
+	Authors         typeext.Authors `json:"authors"`
+	Language        *string         `json:"language"`
+	Image           *gofeed.Image   `json:"image"`
+	Copyright       *string         `json:"copyright"`
+	Generator       *string         `json:"generator"`
+	Categories      []string        `json:"categories"`
+	FeedType        *string         `json:"feedType"`
+	FeedVersion     *string         `json:"feedVersion"`
+	CreatedAt       time.Time       `json:"createdAt"`
+	LastUpdatedAt   time.Time       `json:"lastUpdatedAt"`
+	SubscribedAt    time.Time       `json:"subscribedAt"`
+}
+
+func (q *Queries) GetUserFeedByID(ctx context.Context, arg GetUserFeedByIDParams) (GetUserFeedByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserFeedByID, arg.UserID, arg.ID)
+	var i GetUserFeedByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Link,
+		&i.FeedLink,
+		&i.Links,
+		&i.UpdatedParsed,
+		&i.PublishedParsed,
+		&i.Authors,
+		&i.Language,
+		&i.Image,
+		&i.Copyright,
+		&i.Generator,
+		&i.Categories,
+		&i.FeedType,
+		&i.FeedVersion,
+		&i.CreatedAt,
+		&i.LastUpdatedAt,
+		&i.SubscribedAt,
 	)
 	return i, err
 }
@@ -189,6 +305,90 @@ func (q *Queries) ListFeeds(ctx context.Context, arg ListFeedsParams) ([]Feed, e
 			&i.FeedVersion,
 			&i.CreatedAt,
 			&i.LastUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFeedsByUserID = `-- name: ListFeedsByUserID :many
+SELECT
+  f.id, f.title, f.description, f.link, f.feed_link, f.links,
+  f.updated_parsed, f.published_parsed,
+  f.authors, f.language, f.image, f.copyright, f.generator,
+  f.categories, f.feed_type, f.feed_version,
+  f.created_at, f.last_updated_at,
+  uf.subscribed_at
+FROM feeds f
+JOIN user_feeds uf ON uf.feed_id = f.id
+WHERE uf.user_id = $1
+ORDER BY f.created_at DESC
+LIMIT  $2
+OFFSET $3
+`
+
+type ListFeedsByUserIDParams struct {
+	UserID uuid.UUID `json:"userId"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type ListFeedsByUserIDRow struct {
+	ID              uuid.UUID       `json:"id"`
+	Title           *string         `json:"title"`
+	Description     *string         `json:"description"`
+	Link            *string         `json:"link"`
+	FeedLink        string          `json:"feedLink"`
+	Links           []string        `json:"links"`
+	UpdatedParsed   *time.Time      `json:"updatedParsed"`
+	PublishedParsed *time.Time      `json:"publishedParsed"`
+	Authors         typeext.Authors `json:"authors"`
+	Language        *string         `json:"language"`
+	Image           *gofeed.Image   `json:"image"`
+	Copyright       *string         `json:"copyright"`
+	Generator       *string         `json:"generator"`
+	Categories      []string        `json:"categories"`
+	FeedType        *string         `json:"feedType"`
+	FeedVersion     *string         `json:"feedVersion"`
+	CreatedAt       time.Time       `json:"createdAt"`
+	LastUpdatedAt   time.Time       `json:"lastUpdatedAt"`
+	SubscribedAt    time.Time       `json:"subscribedAt"`
+}
+
+func (q *Queries) ListFeedsByUserID(ctx context.Context, arg ListFeedsByUserIDParams) ([]ListFeedsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listFeedsByUserID, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFeedsByUserIDRow
+	for rows.Next() {
+		var i ListFeedsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Link,
+			&i.FeedLink,
+			&i.Links,
+			&i.UpdatedParsed,
+			&i.PublishedParsed,
+			&i.Authors,
+			&i.Language,
+			&i.Image,
+			&i.Copyright,
+			&i.Generator,
+			&i.Categories,
+			&i.FeedType,
+			&i.FeedVersion,
+			&i.CreatedAt,
+			&i.LastUpdatedAt,
+			&i.SubscribedAt,
 		); err != nil {
 			return nil, err
 		}

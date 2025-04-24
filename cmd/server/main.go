@@ -78,19 +78,21 @@ func main() {
 	h := handler.New(rq, &c, []byte(cfg.SecretKey), v, oauthCfg)
 
 	r := http.NewServeMux()
-	feeds := router.RegisterFeedRoutes(h)
-	items := router.RegisterItemRoutes(h)
-	auth := router.RegisterAuthRoutes(h)
+	feedsRoutes := router.RegisterFeedRoutes(h)
+	itemsRoutes := router.RegisterItemRoutes(h)
+	authRoutes := router.RegisterAuthRoutes(h)
 
-	r.Handle("/api/feeds/", http.StripPrefix("/api", feeds))
-	r.Handle("/api/items/", http.StripPrefix("/api", items))
-	r.Handle("/auth/", http.StripPrefix("/auth", auth))
-	lm := middleware.Logging(r)
+	loggingMiddleware := middleware.Logging()
+	authMiddleware := middleware.AuthMiddleware([]byte(cfg.SecretKey))
+
+	r.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsRoutes)))
+	r.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsRoutes)))
+	r.Handle("/auth/", http.StripPrefix("/auth", authRoutes))
 
 	// Start the server
 	log.Printf("server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
-	if err := http.ListenAndServe(addr, lm); err != nil {
+	if err := http.ListenAndServe(addr, loggingMiddleware(r)); err != nil {
 		log.Panicf("could not start server: %s\n", err.Error())
 	}
 }

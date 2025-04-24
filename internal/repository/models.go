@@ -12,6 +12,20 @@ import (
 	typeext "github.com/rhajizada/gazette/internal/typeext"
 )
 
+type Collection struct {
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"userId"`
+	Name        string    `json:"name"`
+	CreatedAt   time.Time `json:"createdAt"`
+	LastUpdated time.Time `json:"lastUpdated"`
+}
+
+type CollectionItem struct {
+	CollectionID uuid.UUID `json:"collectionId"`
+	ItemID       uuid.UUID `json:"itemId"`
+	AddedAt      time.Time `json:"addedAt"`
+}
+
 type Feed struct {
 	ID              uuid.UUID       `json:"id"`
 	Title           *string         `json:"title"`
@@ -50,4 +64,25 @@ type Item struct {
 	Enclosures      typeext.Enclosures `json:"enclosures"`
 	CreatedAt       time.Time          `json:"createdAt"`
 	UpdatedAt       time.Time          `json:"updatedAt"`
+}
+
+type User struct {
+	ID            uuid.UUID `json:"id"`
+	Sub           string    `json:"sub"`
+	Name          string    `json:"name"`
+	Email         string    `json:"email"`
+	CreatedAt     time.Time `json:"createdAt"`
+	LastUpdatedAt time.Time `json:"lastUpdatedAt"`
+}
+
+type UserFeed struct {
+	UserID       uuid.UUID `json:"userId"`
+	FeedID       uuid.UUID `json:"feedId"`
+	SubscribedAt time.Time `json:"subscribedAt"`
+}
+
+type UserLike struct {
+	UserID  uuid.UUID `json:"userId"`
+	ItemID  uuid.UUID `json:"itemId"`
+	LikedAt time.Time `json:"likedAt"`
 }
