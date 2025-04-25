@@ -32,6 +32,12 @@ SELECT COUNT(*) AS count
 FROM items
 WHERE feed_id = $1;
 
+-- name: CountLikedItems :one
+SELECT
+  COUNT(*) AS count
+FROM user_likes
+WHERE user_id = $1;
+
 -- name: ListItemsByFeedID :many
 SELECT
   id, feed_id, title, description, content, link, links, updated_parsed, published_parsed,
@@ -42,6 +48,33 @@ ORDER BY published_parsed DESC
 LIMIT  $2
 OFFSET $3;
 
+-- name: ListUserLikedItems :many
+SELECT
+  i.id,
+  i.feed_id,
+  i.title,
+  i.description,
+  i.content,
+  i.link,
+  i.links,
+  i.updated_parsed,
+  i.published_parsed,
+  i.authors,
+  i.guid,
+  i.image,
+  i.categories,
+  i.enclosures,
+  i.created_at,
+  i.updated_at,
+  TRUE        AS liked,
+  ul.liked_at
+FROM items i
+JOIN user_likes ul
+  ON ul.item_id = i.id
+  AND ul.user_id = $1
+ORDER BY ul.liked_at DESC
+LIMIT  $2
+OFFSET $3;
 
 -- name: ListItemsByFeedIDForUser :many
 SELECT

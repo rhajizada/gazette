@@ -13,6 +13,73 @@ import (
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
+// ListUserLikedItems returns the items the current user has liked
+func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetUserClaims(r)
+	userID := claims.UserID
+
+	// parse pagination parameters
+	params, err := getPageParams(r.URL.Query())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// total number of liked items
+	total, err := h.Repo.CountLikedItems(r.Context(), userID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed counting liked items: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// fetch liked items with their liked_at timestamps
+	rows, err := h.Repo.ListUserLikedItems(r.Context(), repository.ListUserLikedItemsParams{
+		UserID: userID,
+		Limit:  params.Limit,
+		Offset: params.Offset,
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed listing liked items: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// map to API model
+	items := make([]Item, len(rows))
+	for i, row := range rows {
+		// likedAt should always be non-null here
+		items[i] = Item{
+			ID:              row.ID,
+			FeedID:          row.FeedID,
+			Title:           row.Title,
+			Description:     row.Description,
+			Content:         row.Content,
+			Link:            row.Link,
+			Links:           row.Links,
+			UpdatedParsed:   row.UpdatedParsed,
+			PublishedParsed: row.PublishedParsed,
+			Authors:         row.Authors,
+			GUID:            row.Guid,
+			Image:           row.Image,
+			Categories:      row.Categories,
+			Enclosures:      row.Enclosures,
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+			Liked:           row.Liked,
+			LikedAt:         &row.LikedAt,
+		}
+	}
+
+	resp := ListItemsResponse{
+		Limit:      params.Limit,
+		Offset:     params.Offset,
+		TotalCount: total,
+		Items:      items,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 // GetItemByID returns a single Item (including whether the current user liked it)
 func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)

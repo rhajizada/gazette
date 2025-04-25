@@ -27,6 +27,20 @@ func (q *Queries) CountItemsByFeedID(ctx context.Context, feedID uuid.UUID) (int
 	return count, err
 }
 
+const countLikedItems = `-- name: CountLikedItems :one
+SELECT
+  COUNT(*) AS count
+FROM user_likes
+WHERE user_id = $1
+`
+
+func (q *Queries) CountLikedItems(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLikedItems, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createItem = `-- name: CreateItem :one
 INSERT INTO items
   (feed_id, title, description, content, link, links, updated_parsed, published_parsed,
@@ -295,6 +309,101 @@ func (q *Queries) ListItemsByFeedIDForUser(ctx context.Context, arg ListItemsByF
 	var items []ListItemsByFeedIDForUserRow
 	for rows.Next() {
 		var i ListItemsByFeedIDForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Description,
+			&i.Content,
+			&i.Link,
+			&i.Links,
+			&i.UpdatedParsed,
+			&i.PublishedParsed,
+			&i.Authors,
+			&i.Guid,
+			&i.Image,
+			&i.Categories,
+			&i.Enclosures,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Liked,
+			&i.LikedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserLikedItems = `-- name: ListUserLikedItems :many
+SELECT
+  i.id,
+  i.feed_id,
+  i.title,
+  i.description,
+  i.content,
+  i.link,
+  i.links,
+  i.updated_parsed,
+  i.published_parsed,
+  i.authors,
+  i.guid,
+  i.image,
+  i.categories,
+  i.enclosures,
+  i.created_at,
+  i.updated_at,
+  TRUE        AS liked,
+  ul.liked_at
+FROM items i
+JOIN user_likes ul
+  ON ul.item_id = i.id
+  AND ul.user_id = $1
+ORDER BY ul.liked_at DESC
+LIMIT  $2
+OFFSET $3
+`
+
+type ListUserLikedItemsParams struct {
+	UserID uuid.UUID `json:"userId"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type ListUserLikedItemsRow struct {
+	ID              uuid.UUID          `json:"id"`
+	FeedID          uuid.UUID          `json:"feedId"`
+	Title           *string            `json:"title"`
+	Description     *string            `json:"description"`
+	Content         *string            `json:"content"`
+	Link            string             `json:"link"`
+	Links           []string           `json:"links"`
+	UpdatedParsed   *time.Time         `json:"updatedParsed"`
+	PublishedParsed *time.Time         `json:"publishedParsed"`
+	Authors         typeext.Authors    `json:"authors"`
+	Guid            *string            `json:"guid"`
+	Image           *gofeed.Image      `json:"image"`
+	Categories      []string           `json:"categories"`
+	Enclosures      typeext.Enclosures `json:"enclosures"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
+	Liked           bool               `json:"liked"`
+	LikedAt         time.Time          `json:"likedAt"`
+}
+
+func (q *Queries) ListUserLikedItems(ctx context.Context, arg ListUserLikedItemsParams) ([]ListUserLikedItemsRow, error) {
+	rows, err := q.db.Query(ctx, listUserLikedItems, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserLikedItemsRow
+	for rows.Next() {
+		var i ListUserLikedItemsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.FeedID,
