@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -105,5 +106,17 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		MaxAge:   3600,
 	})
-	http.Redirect(w, r, "/api/feeds/", http.StatusSeeOther)
+
+	baseURL := "/"
+	params := url.Values{}
+	params.Add("token", appToken)
+
+	url, err := url.Parse(baseURL)
+	if err != nil {
+		msg := fmt.Sprintf("failed to sign app token: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	url.RawQuery = params.Encode()
+	http.Redirect(w, r, url.String(), http.StatusSeeOther)
 }

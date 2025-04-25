@@ -90,7 +90,7 @@ func main() {
 	r.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsRoutes)))
 	r.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsRoutes)))
 	r.Handle("/auth/", http.StripPrefix("/auth", authRoutes))
-
+	r.Handle("/", http.HandlerFunc(h.IndexHandler))
 	// Start the server
 	log.Printf("server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
