@@ -99,14 +99,6 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "app_jwt",
-		Value:    appToken,
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   3600,
-	})
-
 	baseURL := "/"
 	params := url.Values{}
 	params.Add("token", appToken)

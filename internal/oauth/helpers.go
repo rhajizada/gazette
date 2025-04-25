@@ -25,7 +25,7 @@ func VerifyToken(rawToken string, secret []byte) (*ApplicationClaims, error) {
 		return secret, nil
 	})
 	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("invalid token: %w", err)
+		return nil, err
 	}
 
 	claims, ok := token.Claims.(*ApplicationClaims)
