@@ -4,8 +4,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/rhajizada/gazette/internal/typeext"
 )
+
+// Person represents an RSS‐feed author for documentation.
+// swagger:model Person
+type Person struct {
+	// example: Jane Doe
+	Name string `json:"name"`
+	// example: jane@example.com
+	Email string `json:"email,omitempty"`
+}
+
+// Authors is a list of Person.
+// swagger:model Authors
+type Authors []Person
 
 type PageParams struct {
 	Limit  int32
@@ -17,48 +29,48 @@ type CreateFeedRequest struct {
 }
 
 type Feed struct {
-	ID              uuid.UUID       `json:"id"`
-	Title           *string         `json:"title,omitempty"`
-	Description     *string         `json:"description,omitempty"`
-	Link            *string         `json:"link,omitempty"`
-	FeedLink        string          `json:"feed_link"`
-	Links           []string        `json:"links,omitempty"`
-	UpdatedParsed   *time.Time      `json:"updated_parsed,omitempty"`
-	PublishedParsed *time.Time      `json:"published_parsed,omitempty"`
-	Authors         typeext.Authors `json:"authors,omitempty"`
-	Language        *string         `json:"language,omitempty"`
-	Image           any             `json:"image,omitempty"`
-	Copyright       *string         `json:"copyright,omitempty"`
-	Generator       *string         `json:"generator,omitempty"`
-	Categories      []string        `json:"categories,omitempty"`
-	FeedType        *string         `json:"feed_type,omitempty"`
-	FeedVersion     *string         `json:"feed_version,omitempty"`
-	CreatedAt       time.Time       `json:"created_at"`
-	LastUpdatedAt   time.Time       `json:"last_updated_at"`
-	Subscribed      bool            `json:"subscribed"`
-	SubscribedAt    *time.Time      `json:"subscribed_at,omitempty"`
+	ID              uuid.UUID  `json:"id"`
+	Title           *string    `json:"title,omitempty"`
+	Description     *string    `json:"description,omitempty"`
+	Link            *string    `json:"link,omitempty"`
+	FeedLink        string     `json:"feed_link"`
+	Links           []string   `json:"links,omitempty"`
+	UpdatedParsed   *time.Time `json:"updated_parsed,omitempty"`
+	PublishedParsed *time.Time `json:"published_parsed,omitempty"`
+	Authors         Authors    `json:"authors,omitempty"`
+	Language        *string    `json:"language,omitempty"`
+	Image           any        `json:"image,omitempty"`
+	Copyright       *string    `json:"copyright,omitempty"`
+	Generator       *string    `json:"generator,omitempty"`
+	Categories      []string   `json:"categories,omitempty"`
+	FeedType        *string    `json:"feed_type,omitempty"`
+	FeedVersion     *string    `json:"feed_version,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	LastUpdatedAt   time.Time  `json:"last_updated_at"`
+	Subscribed      bool       `json:"subscribed"`
+	SubscribedAt    *time.Time `json:"subscribed_at,omitempty"`
 }
 
 // Item is the common model for items in API responses
 type Item struct {
-	ID              uuid.UUID       `json:"id"`
-	FeedID          uuid.UUID       `json:"feed_id"`
-	Title           *string         `json:"title,omitempty"`
-	Description     *string         `json:"description,omitempty"`
-	Content         *string         `json:"content,omitempty"`
-	Link            string          `json:"link"`
-	Links           []string        `json:"links,omitempty"`
-	UpdatedParsed   *time.Time      `json:"updated_parsed,omitempty"`
-	PublishedParsed *time.Time      `json:"published_parsed,omitempty"`
-	Authors         typeext.Authors `json:"authors,omitempty"`
-	GUID            *string         `json:"guid,omitempty"`
-	Image           any             `json:"image,omitempty"`
-	Categories      []string        `json:"categories,omitempty"`
-	Enclosures      any             `json:"enclosures,omitempty"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
-	Liked           bool            `json:"liked"`
-	LikedAt         *time.Time      `json:"liked_at,omitempty"`
+	ID              uuid.UUID  `json:"id"`
+	FeedID          uuid.UUID  `json:"feed_id"`
+	Title           *string    `json:"title,omitempty"`
+	Description     *string    `json:"description,omitempty"`
+	Content         *string    `json:"content,omitempty"`
+	Link            string     `json:"link"`
+	Links           []string   `json:"links,omitempty"`
+	UpdatedParsed   *time.Time `json:"updated_parsed,omitempty"`
+	PublishedParsed *time.Time `json:"published_parsed,omitempty"`
+	Authors         Authors    `json:"authors,omitempty"`
+	GUID            *string    `json:"guid,omitempty"`
+	Image           any        `json:"image,omitempty"`
+	Categories      []string   `json:"categories,omitempty"`
+	Enclosures      any        `json:"enclosures,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	Liked           bool       `json:"liked"`
+	LikedAt         *time.Time `json:"liked_at,omitempty"`
 }
 
 // Collection represents a user's collection of items

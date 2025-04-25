@@ -1,0 +1,743 @@
+definitions:
+  handler.Collection:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      last_updated:
+        type: string
+      name:
+        type: string
+    type: object
+  handler.CreateCollectionRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  handler.CreateFeedRequest:
+    properties:
+      feedURL:
+        type: string
+    type: object
+  handler.Feed:
+    properties:
+      authors:
+        items:
+          $ref: '#/definitions/handler.Person'
+        type: array
+      categories:
+        items:
+          type: string
+        type: array
+      copyright:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      feed_link:
+        type: string
+      feed_type:
+        type: string
+      feed_version:
+        type: string
+      generator:
+        type: string
+      id:
+        type: string
+      image: {}
+      language:
+        type: string
+      last_updated_at:
+        type: string
+      link:
+        type: string
+      links:
+        items:
+          type: string
+        type: array
+      published_parsed:
+        type: string
+      subscribed:
+        type: boolean
+      subscribed_at:
+        type: string
+      title:
+        type: string
+      updated_parsed:
+        type: string
+    type: object
+  handler.Item:
+    properties:
+      authors:
+        items:
+          $ref: '#/definitions/handler.Person'
+        type: array
+      categories:
+        items:
+          type: string
+        type: array
+      content:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      enclosures: {}
+      feed_id:
+        type: string
+      guid:
+        type: string
+      id:
+        type: string
+      image: {}
+      liked:
+        type: boolean
+      liked_at:
+        type: string
+      link:
+        type: string
+      links:
+        items:
+          type: string
+        type: array
+      published_parsed:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_parsed:
+        type: string
+    type: object
+  handler.ListCollectionItemsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.Item'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  handler.ListCollectionsResponse:
+    properties:
+      collections:
+        items:
+          $ref: '#/definitions/handler.Collection'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  handler.ListFeedsResponse:
+    properties:
+      feeds:
+        items:
+          $ref: '#/definitions/handler.Feed'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  handler.ListItemsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.Item'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  handler.Person:
+    properties:
+      email:
+        description: 'example: jane@example.com'
+        type: string
+      name:
+        description: 'example: Jane Doe'
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Swagger API documentation for Gazette.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Gazette API
+  version: 0.1.0
+paths:
+  /api/collections:
+    get:
+      description: Retrieves paginated collections for the current user.
+      parameters:
+      - description: Max number of collections
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of collections to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListCollectionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List collections
+      tags:
+      - Collections
+  /api/collections/:
+    post:
+      description: Creates a named collection for the current user.
+      parameters:
+      - description: Collection name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateCollectionRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Collection'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create collection
+      tags:
+      - Collections
+  /api/collections/{collectionID}:
+    delete:
+      description: Deletes a collection by ID.
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: collectionID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete collection
+      tags:
+      - Collections
+    get:
+      description: Retrieves a collection by ID (must belong to user).
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: collectionID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Collection'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get collection
+      tags:
+      - Collections
+  /api/collections/{collectionID}/items/:
+    get:
+      description: Retrieves items in the collection, including like status.
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: collectionID
+        required: true
+        type: string
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListCollectionItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List items in collection
+      tags:
+      - Collections
+  /api/collections/{collectionID}/items/{itemID}:
+    delete:
+      description: Removes the specified item from the collection.
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: collectionID
+        required: true
+        type: string
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remove item from collection
+      tags:
+      - Collections
+    post:
+      description: Adds an item to the specified collection.
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: collectionID
+        required: true
+        type: string
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: added_at
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Add item to collection
+      tags:
+      - Collections
+  /api/feeds:
+    get:
+      description: Returns all feeds or only those the user is subscribed to.
+      parameters:
+      - description: Only subscribed feeds
+        in: query
+        name: subscribedOnly
+        type: boolean
+      - description: Max number of feeds to return
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of feeds to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListFeedsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List feeds
+      tags:
+      - Feeds
+  /api/feeds/:
+    post:
+      description: Creates a new feed from URL or subscribes the user to it.
+      parameters:
+      - description: Creeate feed payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateFeedRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Feed'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create or subscribe feed
+      tags:
+      - Feeds
+  /api/feeds/{feedID}:
+    delete:
+      description: Removes a feed and all its subscriptions/items.
+      parameters:
+      - description: Feed UUID
+        in: path
+        name: feedID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete feed
+      tags:
+      - Feeds
+    get:
+      description: Retrieves a feed by ID, including the user’s subscription status.
+      parameters:
+      - description: Feed UUID
+        in: path
+        name: feedID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Feed'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get feed
+      tags:
+      - Feeds
+  /api/feeds/{feedID}/items:
+    get:
+      description: Retrieves feed items.
+      parameters:
+      - description: Feed UUID
+        in: path
+        name: feedID
+        required: true
+        type: string
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List feed items
+      tags:
+      - Items
+  /api/feeds/{feedID}/subscribe:
+    put:
+      description: Subscribes the user to an existing feed.
+      parameters:
+      - description: Feed UUID
+        in: path
+        name: feedID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: subscribed_at
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Subscribe to feed
+      tags:
+      - Feeds
+  /api/feeds/{feedID}/unsubscribe:
+    put:
+      description: Removes the user’s subscription to a feed.
+      parameters:
+      - description: Feed UUID
+        in: path
+        name: feedID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Unsubscribe from feed
+      tags:
+      - Feeds
+  /api/items/:
+    get:
+      description: Retrieves items liked by the user, paginated.
+      parameters:
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List liked items
+      tags:
+      - Items
+  /api/items/{itemID}:
+    get:
+      description: Retrieves an item by ID, including like status for the user.
+      parameters:
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Item'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get item
+      tags:
+      - Items
+  /api/items/{itemID}/like:
+    delete:
+      description: Deletes the like record for the current user on an item.
+      parameters:
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Unlike item
+      tags:
+      - Items
+  /items/{itemID}/like:
+    post:
+      description: Creates a like record for the current user on an item.
+      parameters:
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: liked_at
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Like item
+      tags:
+      - Items
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

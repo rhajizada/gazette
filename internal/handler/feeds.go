@@ -17,7 +17,18 @@ import (
 	"github.com/rhajizada/gazette/internal/typeext"
 )
 
-// ListFeeds returns feeds; if subscribedOnly=true, only subscribed ones
+// ListFeeds returns a paginated list of feeds.
+// @Summary      List feeds
+// @Description  Returns all feeds or only those the user is subscribed to.
+// @Tags         Feeds
+// @Param        subscribedOnly  query     bool   false  "Only subscribed feeds"
+// @Param        limit           query     int32  true   "Max number of feeds to return"
+// @Param        offset          query     int32  true   "Number of feeds to skip"
+// @Success      200             {object}  ListFeedsResponse
+// @Failure      400             {object}	 string
+// @Failure      500             {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds [get]
 func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -58,6 +69,13 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 
 	feeds := make([]Feed, len(rows))
 	for i, row := range rows {
+		authors := make([]Person, len(row.Authors))
+		for i, v := range row.Authors {
+			authors[i] = Person{
+				Name:  v.Name,
+				Email: v.Email,
+			}
+		}
 		feeds[i] = Feed{
 			ID:              row.ID,
 			Title:           row.Title,
@@ -67,7 +85,7 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 			Links:           row.Links,
 			UpdatedParsed:   row.UpdatedParsed,
 			PublishedParsed: row.PublishedParsed,
-			Authors:         row.Authors,
+			Authors:         Authors(authors),
 			Language:        row.Language,
 			Image:           row.Image,
 			Copyright:       row.Copyright,
@@ -93,7 +111,17 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// CreateFeed subscribes the current user to a feed (creating it if needed)
+// CreateFeed subscribes the user to a feed, creating it if necessary.
+// @Summary      Create or subscribe feed
+// @Description  Creates a new feed from URL or subscribes the user to it.
+// @Tags         Feeds
+// @Param        body  body      CreateFeedRequest  true  "Creeate feed payload"
+// @Success      200   {object}  Feed
+// @Failure      400   {object}	 string
+// @Failure      409   {object}	 string
+// @Failure      500   {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds/ [post]
 func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -152,6 +180,14 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authors := make([]Person, len(feed.Authors))
+	for i, v := range feed.Authors {
+		authors[i] = Person{
+			Name:  v.Name,
+			Email: v.Email,
+		}
+	}
+
 	resp := Feed{
 		ID:              feed.ID,
 		Title:           feed.Title,
@@ -161,7 +197,7 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		Links:           feed.Links,
 		UpdatedParsed:   feed.UpdatedParsed,
 		PublishedParsed: feed.PublishedParsed,
-		Authors:         feed.Authors,
+		Authors:         Authors(authors),
 		Language:        feed.Language,
 		Image:           feed.Image,
 		Copyright:       feed.Copyright,
@@ -178,7 +214,17 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// GetFeedByID returns one feed with subscription info
+// GetFeedByID returns one feed with subscription info.
+// @Summary      Get feed
+// @Description  Retrieves a feed by ID, including the user’s subscription status.
+// @Tags         Feeds
+// @Param        feedID  path      string  true  "Feed UUID"
+// @Success      200     {object}  Feed
+// @Failure      400     {object}	 string
+// @Failure      404     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds/{feedID} [get]
 func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -201,6 +247,14 @@ func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 		subAt = &uf.SubscribedAt
 	}
 
+	authors := make([]Person, len(feed.Authors))
+	for i, v := range feed.Authors {
+		authors[i] = Person{
+			Name:  v.Name,
+			Email: v.Email,
+		}
+	}
+
 	resp := Feed{
 		ID:              feed.ID,
 		Title:           feed.Title,
@@ -210,7 +264,7 @@ func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 		Links:           feed.Links,
 		UpdatedParsed:   feed.UpdatedParsed,
 		PublishedParsed: feed.PublishedParsed,
-		Authors:         feed.Authors,
+		Authors:         Authors(authors),
 		Language:        feed.Language,
 		Image:           feed.Image,
 		Categories:      feed.Categories,
@@ -225,7 +279,16 @@ func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// DeleteFeedByID removes a feed entirely
+// DeleteFeedByID deletes a feed entirely.
+// @Summary      Delete feed
+// @Description  Removes a feed and all its subscriptions/items.
+// @Tags         Feeds
+// @Param        feedID  path  string  true  "Feed UUID"
+// @Success      204     "No Content"
+// @Failure      400     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds/{feedID} [delete]
 func (h *Handler) DeleteFeedByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("feedID")
 	id, err := uuid.Parse(idStr)
@@ -243,7 +306,17 @@ func (h *Handler) DeleteFeedByID(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// SubscribeToFeed subscribes the current user to an existing feed
+// SubscribeToFeed subscribes the current user to a feed.
+// @Summary      Subscribe to feed
+// @Description  Subscribes the user to an existing feed.
+// @Tags         Feeds
+// @Param        feedID  path      string  true  "Feed UUID"
+// @Success      200     {object}  map[string]time.Time  "subscribed_at"
+// @Failure      400     {object}	 string
+// @Failure      409     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds/{feedID}/subscribe [put]
 func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -266,7 +339,16 @@ func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// UnsubscribeFromFeed removes a user's subscription to a feed
+// UnsubscribeFromFeed unsubscribes the current user.
+// @Summary      Unsubscribe from feed
+// @Description  Removes the user’s subscription to a feed.
+// @Tags         Feeds
+// @Param        feedID  path  string  true  "Feed UUID"
+// @Success      204     "No Content"
+// @Failure      400     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds/{feedID}/unsubscribe [put]
 func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -289,7 +371,18 @@ func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListItemsByFeedID returns paginated items including like info
+// ListItemsByFeedID returns paginated list of items.
+// @Summary      List feed items
+// @Description  Retrieves feed items.
+// @Tags         Items
+// @Param        feedID  path      string  true   "Feed UUID"
+// @Param        limit   query     int32   true   "Max number of items"
+// @Param        offset  query     int32   true   "Number of items to skip"
+// @Success      200     {object}  ListItemsResponse
+// @Failure      400     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/feeds/{feedID}/items [get]
 func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -334,7 +427,13 @@ func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
 	for i, row := range rows {
 		likedAtPtr := row.LikedAt
 		liked := row.LikedAt != nil
-
+		authors := make([]Person, len(row.Authors))
+		for i, v := range row.Authors {
+			authors[i] = Person{
+				Name:  v.Name,
+				Email: v.Email,
+			}
+		}
 		items[i] = Item{
 			ID:              row.ID,
 			FeedID:          row.FeedID,
@@ -345,7 +444,7 @@ func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
 			Links:           row.Links,
 			UpdatedParsed:   row.UpdatedParsed,
 			PublishedParsed: row.PublishedParsed,
-			Authors:         row.Authors,
+			Authors:         Authors(authors),
 			GUID:            row.Guid,
 			Image:           row.Image,
 			Categories:      row.Categories,

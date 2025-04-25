@@ -13,7 +13,17 @@ import (
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
-// ListUserLikedItems returns the items the current user has liked
+// ListUserLikedItems returns items the user has liked.
+// @Summary      List liked items
+// @Description  Retrieves items liked by the user, paginated.
+// @Tags         Items
+// @Param        limit   query     int32  true   "Max number of items"
+// @Param        offset  query     int32  true   "Number of items to skip"
+// @Success      200     {object}  ListItemsResponse
+// @Failure      400     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/items/ [get]
 func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -46,7 +56,13 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 	// map to API model
 	items := make([]Item, len(rows))
 	for i, row := range rows {
-		// likedAt should always be non-null here
+		authors := make([]Person, len(row.Authors))
+		for i, v := range row.Authors {
+			authors[i] = Person{
+				Name:  v.Name,
+				Email: v.Email,
+			}
+		}
 		items[i] = Item{
 			ID:              row.ID,
 			FeedID:          row.FeedID,
@@ -57,7 +73,7 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 			Links:           row.Links,
 			UpdatedParsed:   row.UpdatedParsed,
 			PublishedParsed: row.PublishedParsed,
-			Authors:         row.Authors,
+			Authors:         Authors(authors),
 			GUID:            row.Guid,
 			Image:           row.Image,
 			Categories:      row.Categories,
@@ -80,7 +96,17 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// GetItemByID returns a single Item (including whether the current user liked it)
+// GetItemByID returns a single item.
+// @Summary      Get item
+// @Description  Retrieves an item by ID, including like status for the user.
+// @Tags         Items
+// @Param        itemID  path      string  true  "Item UUID"
+// @Success      200     {object}  Item
+// @Failure      400     {object}	 string
+// @Failure      404     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/items/{itemID} [get]
 func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -115,6 +141,14 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 		likedAt = &like.LikedAt
 	}
 
+	authors := make([]Person, len(row.Authors))
+	for i, v := range row.Authors {
+		authors[i] = Person{
+			Name:  v.Name,
+			Email: v.Email,
+		}
+	}
+
 	// build the API model
 	item := Item{
 		ID:              row.ID,
@@ -126,7 +160,7 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 		Links:           row.Links,
 		UpdatedParsed:   row.UpdatedParsed,
 		PublishedParsed: row.PublishedParsed,
-		Authors:         row.Authors,
+		Authors:         Authors(authors),
 		GUID:            row.Guid,
 		Image:           row.Image,
 		Categories:      row.Categories,
@@ -141,7 +175,17 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(item)
 }
 
-// LikeItem creates a “like” for the current user on an item
+// LikeItem marks an item as liked by the user.
+// @Summary      Like item
+// @Description  Creates a like record for the current user on an item.
+// @Tags         Items
+// @Param        itemID  path      string  true  "Item UUID"
+// @Success      200     {object}  map[string]time.Time  "liked_at"
+// @Failure      400     {object}	 string
+// @Failure      409     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/items/{itemID}/like [post]
 func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID
@@ -167,7 +211,16 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// UnlikeItem removes a “like” for the current user on an item
+// UnlikeItem removes a like from an item.
+// @Summary      Unlike item
+// @Description  Deletes the like record for the current user on an item.
+// @Tags         Items
+// @Param        itemID  path      string  true  "Item UUID"
+// @Success      204     "No Content"
+// @Failure      400     {object}	 string
+// @Failure      500     {object}	 string
+// @Security     BearerAuth
+// @Router       /api/items/{itemID}/like [delete]
 func (h *Handler) UnlikeItem(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetUserClaims(r)
 	userID := claims.UserID

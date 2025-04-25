@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	_ "github.com/rhajizada/gazette/docs"
 	"github.com/rhajizada/gazette/internal/handler"
 )
 

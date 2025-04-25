@@ -17,10 +17,21 @@ import (
 	"github.com/rhajizada/gazette/internal/oauth"
 	"github.com/rhajizada/gazette/internal/repository"
 	"github.com/rhajizada/gazette/internal/router"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 var Version = "dev"
 
+// @title Gazette API
+// @description Swagger API documentation for Gazette.
+// @version 0.1.0
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.Parse()
@@ -89,6 +100,7 @@ func main() {
 	r.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsRoutes)))
 	r.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsRoutes)))
 	r.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsRoutes)))
+	r.Handle("/api/docs/", httpSwagger.WrapHandler)
 	r.Handle("/auth/", http.StripPrefix("/auth", authRoutes))
 	r.Handle("/", http.HandlerFunc(h.IndexHandler))
 	// Start the server

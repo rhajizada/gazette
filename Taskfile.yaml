@@ -48,3 +48,10 @@ tasks:
     env:
       GAZETTE_VERSION: "{{ .version }}"
     dir: ./
+
+  swagger:
+    desc: Generate swagger docs
+    cmds:
+      - |
+        swag init -g cmd/server/main.go
+    dir: ./
