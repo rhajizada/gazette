@@ -12,6 +12,8 @@ func RegisterFeedRoutes(h *handler.Handler) *http.ServeMux {
 	router.HandleFunc("POST /feeds/", h.CreateFeed)
 	router.HandleFunc("GET /feeds/{feedID}", h.GetFeedByID)
 	router.HandleFunc("DELETE /feeds/{feedID}", h.DeleteFeedByID)
+	router.HandleFunc("PUT /feeds/{feedID}/subscribe", h.SubscribeToFeed)
+	router.HandleFunc("PUT /feeds/{feedID}/unsubscribe", h.UnsubscribeFromFeed)
 	router.HandleFunc("GET /feeds/{feedID}/items", h.ListItemsByFeedID)
 	router.HandleFunc("GET /items/{itemID}", h.GetItemByID)
 	return router

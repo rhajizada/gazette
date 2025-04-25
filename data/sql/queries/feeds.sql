@@ -84,11 +84,17 @@ SELECT
   f.created_at, f.last_updated_at,
   uf.subscribed_at
 FROM feeds f
-JOIN user_feeds uf ON uf.feed_id = f.id
-WHERE uf.user_id = $1
+LEFT JOIN user_feeds uf
+  ON uf.feed_id = f.id
+  AND uf.user_id = $1
+WHERE
+  -- if subscribed_only = false, return all;
+  -- if subscribed_only = true, only those where uf.user_id IS NOT NULL
+  (NOT $2) OR (uf.user_id IS NOT NULL)
 ORDER BY f.created_at DESC
-LIMIT  $2
-OFFSET $3;
+LIMIT  $3
+OFFSET $4;
+
 
 -- name: GetUserFeedByID :one
 SELECT

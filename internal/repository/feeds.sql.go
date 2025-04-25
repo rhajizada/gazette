@@ -325,17 +325,23 @@ SELECT
   f.created_at, f.last_updated_at,
   uf.subscribed_at
 FROM feeds f
-JOIN user_feeds uf ON uf.feed_id = f.id
-WHERE uf.user_id = $1
+LEFT JOIN user_feeds uf
+  ON uf.feed_id = f.id
+  AND uf.user_id = $1
+WHERE
+  -- if subscribed_only = false, return all;
+  -- if subscribed_only = true, only those where uf.user_id IS NOT NULL
+  (NOT $2) OR (uf.user_id IS NOT NULL)
 ORDER BY f.created_at DESC
-LIMIT  $2
-OFFSET $3
+LIMIT  $3
+OFFSET $4
 `
 
 type ListFeedsByUserIDParams struct {
-	UserID uuid.UUID `json:"userId"`
-	Limit  int32     `json:"limit"`
-	Offset int32     `json:"offset"`
+	UserID  uuid.UUID   `json:"userId"`
+	Column2 interface{} `json:"column2"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
 }
 
 type ListFeedsByUserIDRow struct {
@@ -357,11 +363,16 @@ type ListFeedsByUserIDRow struct {
 	FeedVersion     *string         `json:"feedVersion"`
 	CreatedAt       time.Time       `json:"createdAt"`
 	LastUpdatedAt   time.Time       `json:"lastUpdatedAt"`
-	SubscribedAt    time.Time       `json:"subscribedAt"`
+	SubscribedAt    *time.Time      `json:"subscribedAt"`
 }
 
 func (q *Queries) ListFeedsByUserID(ctx context.Context, arg ListFeedsByUserIDParams) ([]ListFeedsByUserIDRow, error) {
-	rows, err := q.db.Query(ctx, listFeedsByUserID, arg.UserID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listFeedsByUserID,
+		arg.UserID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

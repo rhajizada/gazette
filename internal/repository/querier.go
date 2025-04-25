@@ -45,6 +45,7 @@ type Querier interface {
 	ListFeeds(ctx context.Context, arg ListFeedsParams) ([]Feed, error)
 	ListFeedsByUserID(ctx context.Context, arg ListFeedsByUserIDParams) ([]ListFeedsByUserIDRow, error)
 	ListItemsByFeedID(ctx context.Context, arg ListItemsByFeedIDParams) ([]Item, error)
+	ListItemsByFeedIDForUser(ctx context.Context, arg ListItemsByFeedIDForUserParams) ([]ListItemsByFeedIDForUserRow, error)
 	ListItemsInCollection(ctx context.Context, arg ListItemsInCollectionParams) ([]ListItemsInCollectionRow, error)
 	ListUserFeedSubscriptions(ctx context.Context, arg ListUserFeedSubscriptionsParams) ([]UserFeed, error)
 	ListUserLikesByItem(ctx context.Context, arg ListUserLikesByItemParams) ([]UserLike, error)

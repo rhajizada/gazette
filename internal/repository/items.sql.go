@@ -223,6 +223,108 @@ func (q *Queries) ListItemsByFeedID(ctx context.Context, arg ListItemsByFeedIDPa
 	return items, nil
 }
 
+const listItemsByFeedIDForUser = `-- name: ListItemsByFeedIDForUser :many
+SELECT
+  i.id,
+  i.feed_id,
+  i.title,
+  i.description,
+  i.content,
+  i.link,
+  i.links,
+  i.updated_parsed,
+  i.published_parsed,
+  i.authors,
+  i.guid,
+  i.image,
+  i.categories,
+  i.enclosures,
+  i.created_at,
+  i.updated_at,
+  (ul.user_id IS NOT NULL)        AS liked,
+  ul.liked_at
+FROM items i
+LEFT JOIN user_likes ul
+  ON ul.item_id = i.id
+  AND ul.user_id = $2
+WHERE i.feed_id = $1
+ORDER BY i.published_parsed DESC
+LIMIT  $3
+OFFSET $4
+`
+
+type ListItemsByFeedIDForUserParams struct {
+	FeedID uuid.UUID `json:"feedId"`
+	UserID uuid.UUID `json:"userId"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type ListItemsByFeedIDForUserRow struct {
+	ID              uuid.UUID          `json:"id"`
+	FeedID          uuid.UUID          `json:"feedId"`
+	Title           *string            `json:"title"`
+	Description     *string            `json:"description"`
+	Content         *string            `json:"content"`
+	Link            string             `json:"link"`
+	Links           []string           `json:"links"`
+	UpdatedParsed   *time.Time         `json:"updatedParsed"`
+	PublishedParsed *time.Time         `json:"publishedParsed"`
+	Authors         typeext.Authors    `json:"authors"`
+	Guid            *string            `json:"guid"`
+	Image           *gofeed.Image      `json:"image"`
+	Categories      []string           `json:"categories"`
+	Enclosures      typeext.Enclosures `json:"enclosures"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
+	Liked           interface{}        `json:"liked"`
+	LikedAt         *time.Time         `json:"likedAt"`
+}
+
+func (q *Queries) ListItemsByFeedIDForUser(ctx context.Context, arg ListItemsByFeedIDForUserParams) ([]ListItemsByFeedIDForUserRow, error) {
+	rows, err := q.db.Query(ctx, listItemsByFeedIDForUser,
+		arg.FeedID,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemsByFeedIDForUserRow
+	for rows.Next() {
+		var i ListItemsByFeedIDForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Description,
+			&i.Content,
+			&i.Link,
+			&i.Links,
+			&i.UpdatedParsed,
+			&i.PublishedParsed,
+			&i.Authors,
+			&i.Guid,
+			&i.Image,
+			&i.Categories,
+			&i.Enclosures,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Liked,
+			&i.LikedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateItemByID = `-- name: UpdateItemByID :one
 UPDATE items
 SET

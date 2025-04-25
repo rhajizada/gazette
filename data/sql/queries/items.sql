@@ -42,6 +42,36 @@ ORDER BY published_parsed DESC
 LIMIT  $2
 OFFSET $3;
 
+
+-- name: ListItemsByFeedIDForUser :many
+SELECT
+  i.id,
+  i.feed_id,
+  i.title,
+  i.description,
+  i.content,
+  i.link,
+  i.links,
+  i.updated_parsed,
+  i.published_parsed,
+  i.authors,
+  i.guid,
+  i.image,
+  i.categories,
+  i.enclosures,
+  i.created_at,
+  i.updated_at,
+  (ul.user_id IS NOT NULL)        AS liked,
+  ul.liked_at
+FROM items i
+LEFT JOIN user_likes ul
+  ON ul.item_id = i.id
+  AND ul.user_id = $2
+WHERE i.feed_id = $1
+ORDER BY i.published_parsed DESC
+LIMIT  $3
+OFFSET $4;
+
 -- name: UpdateItemByID :one
 UPDATE items
 SET
