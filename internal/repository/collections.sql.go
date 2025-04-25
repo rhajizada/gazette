@@ -11,6 +11,19 @@ import (
 	"github.com/google/uuid"
 )
 
+const countCollectionsByUserID = `-- name: CountCollectionsByUserID :one
+SELECT COUNT(*) AS count
+FROM collections
+WHERE user_id = $1
+`
+
+func (q *Queries) CountCollectionsByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCollectionsByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCollection = `-- name: CreateCollection :one
 INSERT INTO collections (user_id, name)
 VALUES ($1, $2)

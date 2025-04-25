@@ -80,12 +80,14 @@ func main() {
 	r := http.NewServeMux()
 	feedsRoutes := router.RegisterFeedRoutes(h)
 	itemsRoutes := router.RegisterItemRoutes(h)
+	collectionsRoutes := router.RegisterCollectionRoutes(h)
 	authRoutes := router.RegisterAuthRoutes(h)
 
 	loggingMiddleware := middleware.Logging()
 	authMiddleware := middleware.AuthMiddleware([]byte(cfg.SecretKey))
 
 	r.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsRoutes)))
+	r.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsRoutes)))
 	r.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsRoutes)))
 	r.Handle("/auth/", http.StripPrefix("/auth", authRoutes))
 

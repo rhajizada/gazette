@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AddItemToCollection(ctx context.Context, arg AddItemToCollectionParams) (CollectionItem, error)
+	CountCollectionsByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountFeeds(ctx context.Context) (int64, error)
 	CountFeedsByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountItemsByFeedID(ctx context.Context, feedID uuid.UUID) (int64, error)

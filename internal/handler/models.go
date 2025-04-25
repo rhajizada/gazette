@@ -61,6 +61,14 @@ type Item struct {
 	LikedAt         *time.Time      `json:"liked_at,omitempty"`
 }
 
+// Collection represents a user's collection of items
+type Collection struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	CreatedAt   time.Time `json:"created_at"`
+	LastUpdated time.Time `json:"last_updated"`
+}
+
 // ListFeedsResponse wraps paginated feeds
 type ListFeedsResponse struct {
 	Limit      int32  `json:"limit"`
@@ -75,4 +83,24 @@ type ListItemsResponse struct {
 	Offset     int32  `json:"offset"`
 	TotalCount int64  `json:"total_count"`
 	Items      []Item `json:"items"`
+}
+
+// ListCollectionsResponse wraps a paginated list of collections for a user
+type ListCollectionsResponse struct {
+	Limit       int32        `json:"limit"`
+	Offset      int32        `json:"offset"`
+	TotalCount  int64        `json:"total_count"`
+	Collections []Collection `json:"collections"`
+}
+
+// ListCollectionItemsResponse wraps a paginated list of items in a collection
+type ListCollectionItemsResponse struct {
+	Limit      int32  `json:"limit"`
+	Offset     int32  `json:"offset"`
+	TotalCount int64  `json:"total_count"`
+	Items      []Item `json:"items"`
+}
+
+type CreateCollectionRequest struct {
+	Name string `json:"name"`
 }
