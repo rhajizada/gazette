@@ -163,7 +163,7 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("failed creating feed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		task, _ := tasks.NewFeedSyncTask(feed.ID)
+		task, _ := tasks.NewSyncFeedTask(feed.ID)
 		h.Client.Enqueue(task)
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("lookup failed: %v", err), http.StatusInternalServerError)

@@ -1,6 +1,8 @@
 module github.com/rhajizada/gazette
 
-go 1.23.6
+go 1.24.0
+
+toolchain go1.24.2
 
 require (
 	github.com/coreos/go-oidc/v3 v3.14.1
@@ -10,9 +12,12 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/mmcdole/gofeed v1.3.0
+	github.com/ollama/ollama v0.6.6
+	github.com/pgvector/pgvector-go v0.3.0
 	github.com/pressly/goose/v3 v3.24.2
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.4
+	golang.org/x/net v0.38.0
 	golang.org/x/oauth2 v0.29.0
 )
 
@@ -48,13 +53,11 @@ require (
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
-	golang.org/x/tools v0.24.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect

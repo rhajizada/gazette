@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	gofeed "github.com/mmcdole/gofeed"
+	"github.com/pgvector/pgvector-go"
 	typeext "github.com/rhajizada/gazette/internal/typeext"
 )
 
@@ -18,6 +19,13 @@ type Collection struct {
 	Name        string    `json:"name"`
 	CreatedAt   time.Time `json:"createdAt"`
 	LastUpdated time.Time `json:"lastUpdated"`
+}
+
+type CollectionEmbedding struct {
+	CollectionID uuid.UUID        `json:"collectionId"`
+	Embedding    *pgvector.Vector `json:"embedding"`
+	CreatedAt    time.Time        `json:"createdAt"`
+	UpdatedAt    time.Time        `json:"updatedAt"`
 }
 
 type CollectionItem struct {
@@ -66,6 +74,13 @@ type Item struct {
 	UpdatedAt       time.Time          `json:"updatedAt"`
 }
 
+type ItemEmbedding struct {
+	ItemID    uuid.UUID        `json:"itemId"`
+	Embedding *pgvector.Vector `json:"embedding"`
+	CreatedAt time.Time        `json:"createdAt"`
+	UpdatedAt time.Time        `json:"updatedAt"`
+}
+
 type User struct {
 	ID            uuid.UUID `json:"id"`
 	Sub           string    `json:"sub"`
@@ -73,6 +88,13 @@ type User struct {
 	Email         string    `json:"email"`
 	CreatedAt     time.Time `json:"createdAt"`
 	LastUpdatedAt time.Time `json:"lastUpdatedAt"`
+}
+
+type UserEmbedding struct {
+	UserID    uuid.UUID        `json:"userId"`
+	Embedding *pgvector.Vector `json:"embedding"`
+	CreatedAt time.Time        `json:"createdAt"`
+	UpdatedAt time.Time        `json:"updatedAt"`
 }
 
 type UserFeed struct {

@@ -38,7 +38,7 @@ func main() {
 		log.Panicf("failed to initialze scheduler: %v", err)
 	}
 
-	dataSyncTask, _ := tasks.NewDataSyncTask()
+	dataSyncTask, _ := tasks.NewSyncDataTask()
 
 	id, err := scheduler.Register("@every 30m", dataSyncTask)
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 
 // RedisConfig holds Redis settings loaded from environment variables.
 type RedisConfig struct {
-	Addr     string `env:"GAZETTE_REDIS_ADDR" env-required`
+	Addr     string `env:"GAZETTE_REDIS_ADDR"`
 	Username string `env:"GAZETTE_REDIS_USERNAME"`
 	Password string `env:"GAZETTE_REDIS_PASSWORD"`
 	DB       int    `env:"GAZETTE_REDIS_DB" env-default:"0"`
@@ -16,34 +16,40 @@ type RedisConfig struct {
 
 // PostgresConfig holds Postgres settings loaded from environment variables.
 type PostgresConfig struct {
-	Host     string `env:"GAZETTE_POSTGRES_HOST" env-required`
+	Host     string `env:"GAZETTE_POSTGRES_HOST"`
 	Port     int    `env:"GAZETTE_POSTGRES_PORT" env-default:"5432"`
-	User     string `env:"GAZETTE_POSTGRES_USER" env-required`
-	Password string `env:"GAZETTE_POSTGRES_PASSWORD" env-required`
-	DBName   string `env:"GAZETTE_POSTGRES_DBNAME" env-required`
+	User     string `env:"GAZETTE_POSTGRES_USER"`
+	Password string `env:"GAZETTE_POSTGRES_PASSWORD"`
+	DBName   string `env:"GAZETTE_POSTGRES_DBNAME"`
 	SSLMode  string `env:"GAZETTE_POSTGRES_SSLMODE" env-default:"disable"`
 }
 
 // ServerConfig holds server-related settings.
 type ServerConfig struct {
 	Port      int    `env:"GAZETTE_PORT" env-default:"8080"`
-	SecretKey string `env:"GAZETTE_SECRET_KEY" env-required`
+	SecretKey string `env:"GAZETTE_SECRET_KEY"`
 	Database  PostgresConfig
 	Redis     RedisConfig
 	OAuth     OAuthConfig
 }
 
 type OAuthConfig struct {
-	ClientID     string `env:"GAZETTE_OAUTH_CLIENT_ID" env-required`
-	ClientSecret string `env:"GAZETTE_OAUTH_CLIENT_SECRET" env-required`
-	IssuerURL    string `env:"GAZETTE_OAUTH_ISSUER_URL" env-required`
-	RedirectURL  string `env:"GAZETTE_OAUTH_REDIRECT_URL" env-required`
+	ClientID     string `env:"GAZETTE_OAUTH_CLIENT_ID"`
+	ClientSecret string `env:"GAZETTE_OAUTH_CLIENT_SECRET"`
+	IssuerURL    string `env:"GAZETTE_OAUTH_ISSUER_URL"`
+	RedirectURL  string `env:"GAZETTE_OAUTH_REDIRECT_URL"`
+}
+
+type OllamaConfig struct {
+	BaseUrl         string `env:"GAZETTE_OLLAMA_URL"`
+	EmbeddingsModel string `env:"GAZETTE_OLLAMA_EMBEDDINGS_MODEL"`
 }
 
 // WorkerConfig holds worker-related settings.
 type WorkerConfig struct {
 	Database PostgresConfig
 	Redis    RedisConfig
+	Ollama   OllamaConfig
 }
 
 // SchedulerConfig holds scheduler-related settings.

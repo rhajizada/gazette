@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${GAZETTE_POSTGRES_DBNAME}
@@ -51,6 +51,8 @@ services:
       GAZETTE_POSTGRES_PASSWORD: ${GAZETTE_POSTGRES_PASSWORD}
       GAZETTE_POSTGRES_DBNAME: "gazette"
       GAZETTE_REDIS_ADDR: "redis:6379"
+      GAZETTE_OLLAMA_URL: "http://host.docker.internal:11434"
+      GAZETTE_OLLAMA_EMBEDDINGS_MODEL: nomic-embed-text:latest
     depends_on:
       - postgres
       - redis

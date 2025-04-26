@@ -65,11 +65,20 @@ func main() {
 	}
 
 	srv := asynq.NewServer(conn, asynq.Config{})
+	ollamaClient, err := tasks.GetOllamaClient(&cfg.Ollama)
+	if err != nil {
+		log.Panicf("failed to initialize Ollama client: %v", err)
+	}
+	err = tasks.InitModels(ollamaClient, &cfg.Ollama)
+	if err != nil {
+		log.Panicf("failed to initialize models: %v", err)
+	}
 
-	h := tasks.NewHandler(rq, &c)
+	h := tasks.NewHandler(rq, &c, &cfg.Ollama)
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeDataSync, h.HandleDataSync)
-	mux.HandleFunc(tasks.TypeFeedSync, h.HandleFeedSync)
+	mux.HandleFunc(tasks.TypeSyncData, h.HandleDataSync)
+	mux.HandleFunc(tasks.TypeSyncFeed, h.HandleFeedSync)
+	mux.HandleFunc(tasks.TypeEmbedItem, h.HandleEmbedItem)
 
 	if err := srv.Run(mux); err != nil {
 		log.Panicf("could not run worker: %v", err)

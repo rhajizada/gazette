@@ -8,22 +8,35 @@ import (
 )
 
 const (
-	TypeDataSync = "data:sync"
-	TypeFeedSync = "feed:sync"
+	TypeSyncData  = "sync:data"
+	TypeSyncFeed  = "sync:feed"
+	TypeEmbedItem = "embed:item"
 )
 
-type FeedSyncPayload struct {
+type SyncFeedPayload struct {
 	FeedID uuid.UUID
 }
 
-func NewDataSyncTask() (*asynq.Task, error) {
-	return asynq.NewTask(TypeDataSync, nil), nil
+type EmbedItemPayload struct {
+	ItemID uuid.UUID
 }
 
-func NewFeedSyncTask(feedID uuid.UUID) (*asynq.Task, error) {
-	payload, err := json.Marshal(FeedSyncPayload{FeedID: feedID})
+func NewSyncDataTask() (*asynq.Task, error) {
+	return asynq.NewTask(TypeSyncData, nil), nil
+}
+
+func NewSyncFeedTask(feedID uuid.UUID) (*asynq.Task, error) {
+	payload, err := json.Marshal(SyncFeedPayload{FeedID: feedID})
 	if err != nil {
 		return nil, err
 	}
-	return asynq.NewTask(TypeFeedSync, payload), nil
+	return asynq.NewTask(TypeSyncFeed, payload), nil
+}
+
+func NewEmbedItemTask(itemID uuid.UUID) (*asynq.Task, error) {
+	payload, err := json.Marshal(EmbedItemPayload{ItemID: itemID})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeEmbedItem, payload), nil
 }
