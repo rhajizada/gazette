@@ -14,12 +14,12 @@ type contextKey string
 // UserContextKey is the key under which JWT claims are stored in the request context.
 var UserContextKey = contextKey("user")
 
-// AuthMiddleware returns a middleware that:
+// APIAuthMiddleware returns a middleware that:
 // 1) extracts the JWT from the Authorization header
 // 2) verifies it using the provided secret
 // 3) injects the resulting ApplicationClaims into the request context
 // and calls the next handler if successful, or returns 401 otherwise.
-func AuthMiddleware(secret []byte) func(http.Handler) http.Handler {
+func APIAuthMiddleware(secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rawToken, err := oauth.ExtractTokenFromHeaders(r)

@@ -92,16 +92,16 @@ func main() {
 	feedsRoutes := router.RegisterFeedRoutes(h)
 	itemsRoutes := router.RegisterItemRoutes(h)
 	collectionsRoutes := router.RegisterCollectionRoutes(h)
-	authRoutes := router.RegisterAuthRoutes(h)
+	oauthRoutes := router.RegisterOAuthRoutes(h)
 
 	loggingMiddleware := middleware.Logging()
-	authMiddleware := middleware.AuthMiddleware([]byte(cfg.SecretKey))
+	authMiddleware := middleware.APIAuthMiddleware([]byte(cfg.SecretKey))
 
 	r.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsRoutes)))
 	r.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsRoutes)))
 	r.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsRoutes)))
 	r.Handle("/api/docs/", httpSwagger.WrapHandler)
-	r.Handle("/auth/", http.StripPrefix("/auth", authRoutes))
+	r.Handle("/oauth/", http.StripPrefix("/oauth", oauthRoutes))
 	r.Handle("/", http.HandlerFunc(h.IndexHandler))
 	// Start the server
 	log.Printf("server is running on port %v\n", cfg.Port)
