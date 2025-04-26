@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rhajizada/gazette/internal/middleware"
 	"github.com/rhajizada/gazette/internal/repository"
+	"github.com/rhajizada/gazette/internal/service"
 )
 
 // ListCollections returns the user’s collections.
@@ -17,14 +17,13 @@ import (
 // @Tags         Collections
 // @Param        limit   query     int32  true   "Max number of collections"
 // @Param        offset  query     int32  true   "Number of collections to skip"
-// @Success      200     {object}  ListCollectionsResponse
-// @Failure      400     {object}	 string
-// @Failure      500     {object}	 string
+// @Success      200     {object}  service.ListCollectionsResponse
+// @Failure      400     {object}  string
+// @Failure      500     {object}  string
 // @Security     BearerAuth
 // @Router       /api/collections [get]
 func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r)
-	userID := claims.UserID
+	userID := middleware.GetUserClaims(r).UserID
 
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
@@ -32,38 +31,16 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	total, err := h.Repo.CountCollectionsByUserID(r.Context(), userID)
-	if err != nil {
-		msg := fmt.Sprintf("failed counting collections: %v", err)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
-	}
-
-	rows, err := h.Repo.ListCollectionsByUser(r.Context(), repository.ListCollectionsByUserParams{
-		UserID: userID,
-		Limit:  params.Limit,
-		Offset: params.Offset,
+	resp, err := h.Service.ListCollections(r.Context(), service.ListCollectionsRequest{
+		repository.ListCollectionsByUserParams{
+			UserID: userID,
+			Limit:  params.Limit,
+			Offset: params.Offset,
+		},
 	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed listing collections: %v", err), http.StatusInternalServerError)
 		return
-	}
-
-	cols := make([]Collection, len(rows))
-	for i, c := range rows {
-		cols[i] = Collection{
-			ID:          c.ID,
-			Name:        c.Name,
-			CreatedAt:   c.CreatedAt,
-			LastUpdated: c.LastUpdated,
-		}
-	}
-
-	resp := ListCollectionsResponse{
-		Limit:       params.Limit,
-		Offset:      params.Offset,
-		TotalCount:  total,
-		Collections: cols,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -74,80 +51,58 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 // @Summary      Create collection
 // @Description  Creates a named collection for the current user.
 // @Tags         Collections
-// @Param        body    body      CreateCollectionRequest  true  "Collection name"
-// @Success      200     {object}  Collection
-// @Failure      400     {object}	 string
-// @Failure      500     {object}	 string
+// @Param        body    body      service.CreateCollectionRequest  true  "Collection name"
+// @Success      200     {object}  service.Collection
+// @Failure      400     {object}  string
+// @Failure      500     {object}  string
 // @Security     BearerAuth
 // @Router       /api/collections/ [post]
 func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r)
-	userID := claims.UserID
+	userID := middleware.GetUserClaims(r).UserID
 
-	var req CreateCollectionRequest
+	var req service.CreateCollectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("bad JSON: %v", err), http.StatusBadRequest)
 		return
 	}
+	req.UserID = userID
 
-	col, err := h.Repo.CreateCollection(r.Context(), repository.CreateCollectionParams{
-		UserID: userID,
-		Name:   req.Name,
-	})
+	col, err := h.Service.CreateCollection(r.Context(), req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed creating collection: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	resp := Collection{
-		ID:          col.ID,
-		Name:        col.Name,
-		CreatedAt:   col.CreatedAt,
-		LastUpdated: col.LastUpdated,
-	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(col)
 }
 
 // GetCollectionByID retrieves a collection.
 // @Summary      Get collection
-// @Description  Retrieves a collection by ID (must belong to user).
+// @Description  Retrieves a collection by ID.
 // @Tags         Collections
 // @Param        collectionID  path  string  true  "Collection UUID"
-// @Success      200           {object}  Collection
-// @Failure      400           {object}	 string
-// @Failure      403           {object}	 string
-// @Failure      404           {object}	 string
+// @Success      200           {object}  service.Collection
+// @Failure      400           {object}  string
+// @Failure      404           {object}  string
+// @Failure      500           {object}  string
 // @Security     BearerAuth
 // @Router       /api/collections/{collectionID} [get]
 func (h *Handler) GetCollectionByID(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r)
-	userID := claims.UserID
-
 	colID, err := uuid.Parse(r.PathValue("collectionID"))
 	if err != nil {
 		http.Error(w, "invalid collection ID", http.StatusBadRequest)
 		return
 	}
 
-	col, err := h.Repo.GetCollectionByID(r.Context(), colID)
+	col, err := h.Service.GetCollection(r.Context(), colID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("collection not found: %v", err), http.StatusNotFound)
-		return
-	}
-	if col.UserID != userID {
-		http.Error(w, "forbidden", http.StatusForbidden)
+		http.Error(w, fmt.Sprintf("failed fetching collection: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	resp := Collection{
-		ID:          col.ID,
-		Name:        col.Name,
-		CreatedAt:   col.CreatedAt,
-		LastUpdated: col.LastUpdated,
-	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(col)
 }
 
 // DeleteCollectionByID deletes a collection.
@@ -155,9 +110,9 @@ func (h *Handler) GetCollectionByID(w http.ResponseWriter, r *http.Request) {
 // @Description  Deletes a collection by ID.
 // @Tags         Collections
 // @Param        collectionID  path  string  true  "Collection UUID"
-// @Success      204           "No Content"
-// @Failure      400           {object}	 string
-// @Failure      500           {object}	 string
+// @Success      204  "No Content"
+// @Failure      400  {object}  string
+// @Failure      500  {object}  string
 // @Security     BearerAuth
 // @Router       /api/collections/{collectionID} [delete]
 func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +122,7 @@ func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Repo.DeleteCollectionByID(r.Context(), colID); err != nil {
+	if err := h.Service.DeleteCollection(r.Context(), colID); err != nil {
 		http.Error(w, fmt.Sprintf("failed deleting collection: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -181,11 +136,11 @@ func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
 // @Tags         Collections
 // @Param        collectionID  path  string  true  "Collection UUID"
 // @Param        itemID        path  string  true  "Item UUID"
-// @Success      200           {object}  map[string]time.Time  "added_at"
-// @Failure      400           {object}	 string
-// @Failure      500           {object}	 string
+// @Success      200  {object}  object service.AddItemToCollectionResponse
+// @Failure      400  {object}  string
+// @Failure      500  {object}  string
 // @Security     BearerAuth
-// @Router       /api/collections/{collectionID}/items/{itemID} [post]
+// @Router       /api/collections/{collectionID}/item/{itemID} [post]
 func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 	colID, err := uuid.Parse(r.PathValue("collectionID"))
 	if err != nil {
@@ -197,19 +152,18 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid item ID", http.StatusBadRequest)
 		return
 	}
+	fmt.Printf("updating %s %s", colID, itemID)
 
-	rec, err := h.Repo.AddItemToCollection(r.Context(), repository.AddItemToCollectionParams{
-		CollectionID: colID,
-		ItemID:       itemID,
+	resp, err := h.Service.AddItemToCollection(r.Context(), service.AddItemToCollectionRequest{
+		repository.AddItemToCollectionParams{
+			CollectionID: colID,
+			ItemID:       itemID,
+		},
 	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed adding item: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	resp := struct {
-		AddedAt time.Time `json:"added_at"`
-	}{AddedAt: rec.AddedAt}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
@@ -220,11 +174,11 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 // @Tags         Collections
 // @Param        collectionID  path  string  true  "Collection UUID"
 // @Param        itemID        path  string  true  "Item UUID"
-// @Success      204           "No Content"
-// @Failure      400           {object}	 string
-// @Failure      500           {object}	 string
+// @Success      204  "No Content"
+// @Failure      400  {object}  string
+// @Failure      500  {object}  string
 // @Security     BearerAuth
-// @Router       /api/collections/{collectionID}/items/{itemID} [delete]
+// @Router       /api/collections/{collectionID}/item/{itemID} [delete]
 func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Request) {
 	colID, err := uuid.Parse(r.PathValue("collectionID"))
 	if err != nil {
@@ -237,9 +191,11 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.Repo.RemoveItemFromCollection(r.Context(), repository.RemoveItemFromCollectionParams{
-		CollectionID: colID,
-		ItemID:       itemID,
+	if err := h.Service.RemoveItemFromCollection(r.Context(), service.RemoveItemFromCollectionRequest{
+		repository.RemoveItemFromCollectionParams{
+			CollectionID: colID,
+			ItemID:       itemID,
+		},
 	}); err != nil {
 		http.Error(w, fmt.Sprintf("failed removing item: %v", err), http.StatusInternalServerError)
 		return
@@ -255,15 +211,13 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 // @Param        collectionID  path      string  true   "Collection UUID"
 // @Param        limit         query     int32   true   "Max number of items"
 // @Param        offset        query     int32   true   "Number of items to skip"
-// @Success      200           {object}  ListCollectionItemsResponse
-// @Failure      400           {object}	 string
-// @Failure      500           {object}	 string
+// @Success      200           {object}  service.ListCollectionItemsResponse
+// @Failure      400           {object}  string
+// @Failure      500           {object}  string
 // @Security     BearerAuth
-// @Router       /api/collections/{collectionID}/items/ [get]
+// @Router       /api/collections/{collectionID}/items [get]
 func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r)
-	userID := claims.UserID
-
+	userID := middleware.GetUserClaims(r).UserID
 	colID, err := uuid.Parse(r.PathValue("collectionID"))
 	if err != nil {
 		http.Error(w, "invalid collection ID", http.StatusBadRequest)
@@ -275,68 +229,17 @@ func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	total, err := h.Repo.CountItemsInCollection(r.Context(), colID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed counting items: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	rows, err := h.Repo.ListItemsInCollection(r.Context(), repository.ListItemsInCollectionParams{
-		CollectionID: colID,
-		Limit:        params.Limit,
-		Offset:       params.Offset,
+	resp, err := h.Service.ListCollectionItems(r.Context(), service.ListCollectionItemsRequest{
+		UserID: userID,
+		ListItemsInCollectionParams: repository.ListItemsInCollectionParams{
+			CollectionID: colID,
+			Limit:        params.Limit,
+			Offset:       params.Offset,
+		},
 	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed listing items: %v", err), http.StatusInternalServerError)
 		return
-	}
-
-	items := make([]Item, len(rows))
-	for i, row := range rows {
-		// convert sql.Null* to pointers
-
-		// fetch like status per item
-		liked := false
-		var likedAtPtr *time.Time
-		if like, err := h.Repo.GetUserLike(r.Context(), repository.GetUserLikeParams{UserID: userID, ItemID: row.ID}); err == nil {
-			liked = true
-			likedAtPtr = &like.LikedAt
-		}
-		authors := make([]Person, len(row.Authors))
-		for i, v := range row.Authors {
-			authors[i] = Person{
-				Name:  v.Name,
-				Email: v.Email,
-			}
-		}
-
-		items[i] = Item{
-			ID:              row.ID,
-			FeedID:          row.FeedID,
-			Title:           row.Title,
-			Description:     row.Description,
-			Content:         row.Content,
-			Link:            row.Link,
-			Links:           row.Links,
-			UpdatedParsed:   row.UpdatedParsed,
-			PublishedParsed: row.PublishedParsed,
-			Authors:         Authors(authors),
-			GUID:            row.Guid,
-			Image:           row.Image,
-			Categories:      row.Categories,
-			Enclosures:      row.Enclosures,
-			CreatedAt:       row.CreatedAt,
-			UpdatedAt:       row.UpdatedAt,
-			Liked:           liked,
-			LikedAt:         likedAtPtr,
-		}
-	}
-
-	resp := ListCollectionItemsResponse{
-		Limit:      params.Limit,
-		Offset:     params.Offset,
-		TotalCount: total,
-		Items:      items,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

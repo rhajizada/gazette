@@ -17,6 +17,7 @@ import (
 	"github.com/rhajizada/gazette/internal/oauth"
 	"github.com/rhajizada/gazette/internal/repository"
 	"github.com/rhajizada/gazette/internal/router"
+	"github.com/rhajizada/gazette/internal/service"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -86,7 +87,8 @@ func main() {
 	}
 
 	// Create handler
-	h := handler.New(rq, &c, []byte(cfg.SecretKey), v, oauthCfg)
+	s := service.New(rq, &c)
+	h := handler.New(s, []byte(cfg.SecretKey), v, oauthCfg)
 
 	r := http.NewServeMux()
 	feedsRoutes := router.RegisterFeedRoutes(h)

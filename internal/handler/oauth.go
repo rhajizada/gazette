@@ -64,7 +64,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Repo.GetUserBySub(r.Context(), claims.Sub)
+	user, err := h.Service.Repo.GetUserBySub(r.Context(), claims.Sub)
 	userExists := true
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -77,7 +77,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !userExists {
-		user, err = h.Repo.CreateUser(r.Context(), repository.CreateUserParams{
+		user, err = h.Service.Repo.CreateUser(r.Context(), repository.CreateUserParams{
 			Sub:   claims.Sub,
 			Name:  claims.Name,
 			Email: claims.Email,
