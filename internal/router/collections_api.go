@@ -7,9 +7,9 @@ import (
 	"github.com/rhajizada/gazette/internal/handler"
 )
 
-func RegisterCollectionRoutes(h *handler.Handler) *http.ServeMux {
+func RegisterCollectionsAPI(h *handler.Handler) *http.ServeMux {
 	router := http.NewServeMux()
-	router.HandleFunc("GET /collections", h.ListCollections)
+	router.HandleFunc("GET /collections/", h.ListCollections)
 	router.HandleFunc("POST /collections/", h.CreateCollection)
 	router.HandleFunc("GET /collections/{collectionID}", h.GetCollectionByID)
 	router.HandleFunc("DELETE /collections/{collectionID}", h.DeleteCollectionByID)

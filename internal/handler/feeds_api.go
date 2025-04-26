@@ -61,7 +61,7 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 // @Summary      Create or subscribe feed
 // @Description  Creates a new feed from URL or subscribes the user to it.
 // @Tags         Feeds
-// @Param        body  body      service.CreateFeedRequest  true  "Create feed payload"
+// @Param        body  body      CreateFeedRequest  true  "Create feed payload"
 // @Success      200   {object}  service.Feed
 // @Failure      400   {object}  string
 // @Failure      409   {object}  string
@@ -71,14 +71,18 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 
-	var req service.CreateFeedRequest
+	var req CreateFeedRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("bad JSON: %v", err), http.StatusBadRequest)
 		return
 	}
-	req.UserID = userID
 
-	feed, err := h.Service.CreateFeed(r.Context(), req)
+	query := service.CreateFeedRequest{
+		FeedURL: req.FeedURL,
+		UserID:  userID,
+	}
+
+	feed, err := h.Service.CreateFeed(r.Context(), query)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed creating feed: %v", err), http.StatusInternalServerError)
 		return
@@ -107,11 +111,9 @@ func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := service.GetFeedRequest{
-		GetUserFeedSubscriptionParams: repository.GetUserFeedSubscriptionParams{
-			UserID: userID,
-			FeedID: feedID,
-		},
+	req := repository.GetUserFeedSubscriptionParams{
+		UserID: userID,
+		FeedID: feedID,
 	}
 	feed, err := h.Service.GetFeed(r.Context(), req)
 	if err != nil {
@@ -171,12 +173,11 @@ func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respData, err := h.Service.SubscribeToFeed(r.Context(), service.SubscribeToFeedRequest{
-		CreateUserFeedSubscriptionParams: repository.CreateUserFeedSubscriptionParams{
+	respData, err := h.Service.SubscribeToFeed(r.Context(),
+		repository.CreateUserFeedSubscriptionParams{
 			UserID: userID,
 			FeedID: feedID,
-		},
-	})
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed subscribing: %v", err), http.StatusConflict)
 		return
@@ -195,7 +196,7 @@ func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 // @Failure      400     {object}  string
 // @Failure      500     {object}  string
 // @Security     BearerAuth
-// @Router       /api/feeds/{feedID}/unsubscribe [put]
+// @Router       /api/feeds/{feedID}/subscribe [delete]
 func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 	feedID, err := uuid.Parse(r.PathValue("feedID"))
@@ -204,12 +205,11 @@ func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.UnsubscribeFromFeed(r.Context(), service.UnsubscribeFromFeedRequest{
-		DeleteUserFeedSubscriptionParams: repository.DeleteUserFeedSubscriptionParams{
+	if err := h.Service.UnsubscribeFromFeed(r.Context(),
+		repository.DeleteUserFeedSubscriptionParams{
 			UserID: userID,
 			FeedID: feedID,
-		},
-	}); err != nil {
+		}); err != nil {
 		http.Error(w, fmt.Sprintf("failed unsubscribing: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -242,14 +242,13 @@ func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.Service.ListItemsByFeedID(r.Context(), service.ListItemsByFeedIDRequest{
+	resp, err := h.Service.ListItemsByFeedID(r.Context(),
 		repository.ListItemsByFeedIDForUserParams{
 			FeedID: feedID,
 			UserID: userID,
 			Limit:  params.Limit,
 			Offset: params.Offset,
-		},
-	})
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed listing items: %v", err), http.StatusInternalServerError)
 		return

@@ -7,7 +7,7 @@ import (
 	"github.com/rhajizada/gazette/internal/handler"
 )
 
-func RegisterItemRoutes(h *handler.Handler) *http.ServeMux {
+func RegisterItemsAPI(h *handler.Handler) *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /items/", h.ListUserLikedItems)
 	router.HandleFunc("GET /items/{itemID}", h.GetItemByID)

@@ -11,6 +11,11 @@ import (
 
 const MaxLimit = 100
 
+type PageParams struct {
+	Limit  int32
+	Offset int32
+}
+
 func getPageParams(v url.Values) (PageParams, error) {
 	var params PageParams
 	limit := v.Get("limit")

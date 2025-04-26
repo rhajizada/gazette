@@ -1,5 +1,10 @@
 definitions:
-  handler.Collection:
+  github_com_rhajizada_gazette_internal_service.AddItemToCollectionResponse:
+    properties:
+      added_at:
+        type: string
+    type: object
+  github_com_rhajizada_gazette_internal_service.Collection:
     properties:
       created_at:
         type: string
@@ -10,21 +15,11 @@ definitions:
       name:
         type: string
     type: object
-  handler.CreateCollectionRequest:
-    properties:
-      name:
-        type: string
-    type: object
-  handler.CreateFeedRequest:
-    properties:
-      feedURL:
-        type: string
-    type: object
-  handler.Feed:
+  github_com_rhajizada_gazette_internal_service.Feed:
     properties:
       authors:
         items:
-          $ref: '#/definitions/handler.Person'
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Person'
         type: array
       categories:
         items:
@@ -68,11 +63,11 @@ definitions:
       updated_parsed:
         type: string
     type: object
-  handler.Item:
+  github_com_rhajizada_gazette_internal_service.Item:
     properties:
       authors:
         items:
-          $ref: '#/definitions/handler.Person'
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Person'
         type: array
       categories:
         items:
@@ -111,11 +106,16 @@ definitions:
       updated_parsed:
         type: string
     type: object
-  handler.ListCollectionItemsResponse:
+  github_com_rhajizada_gazette_internal_service.LikeItemResponse:
+    properties:
+      liked_at:
+        type: string
+    type: object
+  github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/handler.Item'
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Item'
         type: array
       limit:
         type: integer
@@ -124,11 +124,11 @@ definitions:
       total_count:
         type: integer
     type: object
-  handler.ListCollectionsResponse:
+  github_com_rhajizada_gazette_internal_service.ListCollectionsResponse:
     properties:
       collections:
         items:
-          $ref: '#/definitions/handler.Collection'
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Collection'
         type: array
       limit:
         type: integer
@@ -137,11 +137,11 @@ definitions:
       total_count:
         type: integer
     type: object
-  handler.ListFeedsResponse:
+  github_com_rhajizada_gazette_internal_service.ListFeedsResponse:
     properties:
       feeds:
         items:
-          $ref: '#/definitions/handler.Feed'
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Feed'
         type: array
       limit:
         type: integer
@@ -150,11 +150,11 @@ definitions:
       total_count:
         type: integer
     type: object
-  handler.ListItemsResponse:
+  github_com_rhajizada_gazette_internal_service.ListItemsResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/handler.Item'
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Item'
         type: array
       limit:
         type: integer
@@ -163,13 +163,28 @@ definitions:
       total_count:
         type: integer
     type: object
-  handler.Person:
+  github_com_rhajizada_gazette_internal_service.Person:
     properties:
       email:
         description: 'example: jane@example.com'
         type: string
       name:
         description: 'example: Jane Doe'
+        type: string
+    type: object
+  github_com_rhajizada_gazette_internal_service.SubscibeToFeedResponse:
+    properties:
+      subscribed_at:
+        type: string
+    type: object
+  internal_handler.CreateCollectionRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  internal_handler.CreateFeedRequest:
+    properties:
+      feed_url:
         type: string
     type: object
 info:
@@ -199,7 +214,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ListCollectionsResponse'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionsResponse'
         "400":
           description: Bad Request
           schema:
@@ -222,12 +237,12 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/handler.CreateCollectionRequest'
+          $ref: '#/definitions/internal_handler.CreateCollectionRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Collection'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Collection'
         "400":
           description: Bad Request
           schema:
@@ -267,7 +282,7 @@ paths:
       tags:
       - Collections
     get:
-      description: Retrieves a collection by ID (must belong to user).
+      description: Retrieves a collection by ID.
       parameters:
       - description: Collection UUID
         in: path
@@ -278,50 +293,13 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Collection'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Collection'
         "400":
           description: Bad Request
-          schema:
-            type: string
-        "403":
-          description: Forbidden
           schema:
             type: string
         "404":
           description: Not Found
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Get collection
-      tags:
-      - Collections
-  /api/collections/{collectionID}/items/:
-    get:
-      description: Retrieves items in the collection, including like status.
-      parameters:
-      - description: Collection UUID
-        in: path
-        name: collectionID
-        required: true
-        type: string
-      - description: Max number of items
-        in: query
-        name: limit
-        required: true
-        type: integer
-      - description: Number of items to skip
-        in: query
-        name: offset
-        required: true
-        type: integer
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ListCollectionItemsResponse'
-        "400":
-          description: Bad Request
           schema:
             type: string
         "500":
@@ -330,10 +308,10 @@ paths:
             type: string
       security:
       - BearerAuth: []
-      summary: List items in collection
+      summary: Get collection
       tags:
       - Collections
-  /api/collections/{collectionID}/items/{itemID}:
+  /api/collections/{collectionID}/item/{itemID}:
     delete:
       description: Removes the specified item from the collection.
       parameters:
@@ -378,11 +356,9 @@ paths:
         type: string
       responses:
         "200":
-          description: added_at
+          description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.AddItemToCollectionResponse'
         "400":
           description: Bad Request
           schema:
@@ -394,6 +370,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Add item to collection
+      tags:
+      - Collections
+  /api/collections/{collectionID}/items:
+    get:
+      description: Retrieves items in the collection, including like status.
+      parameters:
+      - description: Collection UUID
+        in: path
+        name: collectionID
+        required: true
+        type: string
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List items in collection
       tags:
       - Collections
   /api/feeds:
@@ -418,7 +431,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ListFeedsResponse'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListFeedsResponse'
         "400":
           description: Bad Request
           schema:
@@ -432,21 +445,20 @@ paths:
       summary: List feeds
       tags:
       - Feeds
-  /api/feeds/:
     post:
       description: Creates a new feed from URL or subscribes the user to it.
       parameters:
-      - description: Creeate feed payload
+      - description: Create feed payload
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/handler.CreateFeedRequest'
+          $ref: '#/definitions/internal_handler.CreateFeedRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Feed'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Feed'
         "400":
           description: Bad Request
           schema:
@@ -501,7 +513,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Feed'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Feed'
         "400":
           description: Bad Request
           schema:
@@ -542,7 +554,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ListItemsResponse'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
         "400":
           description: Bad Request
           schema:
@@ -557,40 +569,7 @@ paths:
       tags:
       - Items
   /api/feeds/{feedID}/subscribe:
-    put:
-      description: Subscribes the user to an existing feed.
-      parameters:
-      - description: Feed UUID
-        in: path
-        name: feedID
-        required: true
-        type: string
-      responses:
-        "200":
-          description: subscribed_at
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "409":
-          description: Conflict
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Subscribe to feed
-      tags:
-      - Feeds
-  /api/feeds/{feedID}/unsubscribe:
-    put:
+    delete:
       description: Removes the user’s subscription to a feed.
       parameters:
       - description: Feed UUID
@@ -614,7 +593,37 @@ paths:
       summary: Unsubscribe from feed
       tags:
       - Feeds
-  /api/items/:
+    put:
+      description: Subscribes the user to an existing feed.
+      parameters:
+      - description: Feed UUID
+        in: path
+        name: feedID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.SubscibeToFeedResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Subscribe to feed
+      tags:
+      - Feeds
+  /api/items:
     get:
       description: Retrieves items liked by the user, paginated.
       parameters:
@@ -632,7 +641,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ListItemsResponse'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
         "400":
           description: Bad Request
           schema:
@@ -659,7 +668,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Item'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Item'
         "400":
           description: Bad Request
           schema:
@@ -702,7 +711,6 @@ paths:
       summary: Unlike item
       tags:
       - Items
-  /items/{itemID}/like:
     post:
       description: Creates a like record for the current user on an item.
       parameters:
@@ -713,11 +721,9 @@ paths:
         type: string
       responses:
         "200":
-          description: liked_at
+          description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.LikeItemResponse'
         "400":
           description: Bad Request
           schema:

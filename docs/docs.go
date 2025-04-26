@@ -51,7 +51,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ListCollectionsResponse"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionsResponse"
                         }
                     },
                     "400": {
@@ -88,7 +88,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.CreateCollectionRequest"
+                            "$ref": "#/definitions/internal_handler.CreateCollectionRequest"
                         }
                     }
                 ],
@@ -96,7 +96,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Collection"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Collection"
                         }
                     },
                     "400": {
@@ -121,7 +121,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves a collection by ID (must belong to user).",
+                "description": "Retrieves a collection by ID.",
                 "tags": [
                     "Collections"
                 ],
@@ -139,7 +139,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Collection"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Collection"
                         }
                     },
                     "400": {
@@ -148,14 +148,14 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -201,64 +201,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/collections/{collectionID}/items/": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieves items in the collection, including like status.",
-                "tags": [
-                    "Collections"
-                ],
-                "summary": "List items in collection",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Collection UUID",
-                        "name": "collectionID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Max number of items",
-                        "name": "limit",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Number of items to skip",
-                        "name": "offset",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ListCollectionItemsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/collections/{collectionID}/items/{itemID}": {
+        "/api/collections/{collectionID}/item/{itemID}": {
             "post": {
                 "security": [
                     {
@@ -288,12 +231,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "added_at",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.AddItemToCollectionResponse"
                         }
                     },
                     "400": {
@@ -356,6 +296,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/collections/{collectionID}/items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves items in the collection, including like status.",
+                "tags": [
+                    "Collections"
+                ],
+                "summary": "List items in collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection UUID",
+                        "name": "collectionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max number of items",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items to skip",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/feeds": {
             "get": {
                 "security": [
@@ -394,7 +391,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ListFeedsResponse"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListFeedsResponse"
                         }
                     },
                     "400": {
@@ -410,9 +407,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/feeds/": {
+            },
             "post": {
                 "security": [
                     {
@@ -426,12 +421,12 @@ const docTemplate = `{
                 "summary": "Create or subscribe feed",
                 "parameters": [
                     {
-                        "description": "Creeate feed payload",
+                        "description": "Create feed payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.CreateFeedRequest"
+                            "$ref": "#/definitions/internal_handler.CreateFeedRequest"
                         }
                     }
                 ],
@@ -439,7 +434,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Feed"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Feed"
                         }
                     },
                     "400": {
@@ -488,7 +483,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Feed"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Feed"
                         }
                     },
                     "400": {
@@ -589,7 +584,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ListItemsResponse"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse"
                         }
                     },
                     "400": {
@@ -630,12 +625,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "subscribed_at",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.SubscibeToFeedResponse"
                         }
                     },
                     "400": {
@@ -657,10 +649,8 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/feeds/{feedID}/unsubscribe": {
-            "put": {
+            },
+            "delete": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -699,7 +689,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/items/": {
+        "/api/items": {
             "get": {
                 "security": [
                     {
@@ -731,7 +721,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ListItemsResponse"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse"
                         }
                     },
                     "400": {
@@ -774,7 +764,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Item"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Item"
                         }
                     },
                     "400": {
@@ -799,6 +789,53 @@ const docTemplate = `{
             }
         },
         "/api/items/{itemID}/like": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a like record for the current user on an item.",
+                "tags": [
+                    "Items"
+                ],
+                "summary": "Like item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Item UUID",
+                        "name": "itemID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.LikeItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -837,62 +874,18 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/items/{itemID}/like": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Creates a like record for the current user on an item.",
-                "tags": [
-                    "Items"
-                ],
-                "summary": "Like item",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Item UUID",
-                        "name": "itemID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "liked_at",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
-        "handler.Collection": {
+        "github_com_rhajizada_gazette_internal_service.AddItemToCollectionResponse": {
+            "type": "object",
+            "properties": {
+                "added_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_rhajizada_gazette_internal_service.Collection": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -909,29 +902,13 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.CreateCollectionRequest": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.CreateFeedRequest": {
-            "type": "object",
-            "properties": {
-                "feedURL": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.Feed": {
+        "github_com_rhajizada_gazette_internal_service.Feed": {
             "type": "object",
             "properties": {
                 "authors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Person"
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Person"
                     }
                 },
                 "categories": {
@@ -997,13 +974,13 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.Item": {
+        "github_com_rhajizada_gazette_internal_service.Item": {
             "type": "object",
             "properties": {
                 "authors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Person"
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Person"
                     }
                 },
                 "categories": {
@@ -1061,13 +1038,21 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ListCollectionItemsResponse": {
+        "github_com_rhajizada_gazette_internal_service.LikeItemResponse": {
+            "type": "object",
+            "properties": {
+                "liked_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Item"
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Item"
                     }
                 },
                 "limit": {
@@ -1081,13 +1066,13 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ListCollectionsResponse": {
+        "github_com_rhajizada_gazette_internal_service.ListCollectionsResponse": {
             "type": "object",
             "properties": {
                 "collections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Collection"
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Collection"
                     }
                 },
                 "limit": {
@@ -1101,13 +1086,13 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ListFeedsResponse": {
+        "github_com_rhajizada_gazette_internal_service.ListFeedsResponse": {
             "type": "object",
             "properties": {
                 "feeds": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Feed"
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Feed"
                     }
                 },
                 "limit": {
@@ -1121,13 +1106,13 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ListItemsResponse": {
+        "github_com_rhajizada_gazette_internal_service.ListItemsResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Item"
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Item"
                     }
                 },
                 "limit": {
@@ -1141,7 +1126,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.Person": {
+        "github_com_rhajizada_gazette_internal_service.Person": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1150,6 +1135,30 @@ const docTemplate = `{
                 },
                 "name": {
                     "description": "example: Jane Doe",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_rhajizada_gazette_internal_service.SubscibeToFeedResponse": {
+            "type": "object",
+            "properties": {
+                "subscribed_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.CreateCollectionRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler.CreateFeedRequest": {
+            "type": "object",
+            "properties": {
+                "feed_url": {
                     "type": "string"
                 }
             }

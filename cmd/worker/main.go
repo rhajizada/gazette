@@ -55,8 +55,8 @@ func main() {
 
 	rq := repository.New(pool)
 	conn := database.CreateRedisClient(&cfg.Redis)
-	c := *asynq.NewClient(conn)
-	err = c.Ping()
+	client := *asynq.NewClient(conn)
+	err = client.Ping()
 	if err != nil {
 		log.Panicf("failed to connect to Redis: %v", err)
 	}
@@ -64,7 +64,7 @@ func main() {
 		log.Panicf("failed to connect to Redis: %v", err)
 	}
 
-	srv := asynq.NewServer(conn, asynq.Config{})
+	server := asynq.NewServer(conn, asynq.Config{})
 	ollamaClient, err := tasks.GetOllamaClient(&cfg.Ollama)
 	if err != nil {
 		log.Panicf("failed to initialize Ollama client: %v", err)
@@ -74,13 +74,13 @@ func main() {
 		log.Panicf("failed to initialize models: %v", err)
 	}
 
-	h := tasks.NewHandler(rq, &c, &cfg.Ollama)
+	handler := tasks.NewHandler(rq, &client, &cfg.Ollama)
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeSyncData, h.HandleDataSync)
-	mux.HandleFunc(tasks.TypeSyncFeed, h.HandleFeedSync)
-	mux.HandleFunc(tasks.TypeEmbedItem, h.HandleEmbedItem)
+	mux.HandleFunc(tasks.TypeSyncData, handler.HandleDataSync)
+	mux.HandleFunc(tasks.TypeSyncFeed, handler.HandleFeedSync)
+	mux.HandleFunc(tasks.TypeEmbedItem, handler.HandleEmbedItem)
 
-	if err := srv.Run(mux); err != nil {
+	if err := server.Run(mux); err != nil {
 		log.Panicf("could not run worker: %v", err)
 	}
 }

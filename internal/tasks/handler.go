@@ -14,10 +14,10 @@ type Handler struct {
 	OllamaConfig *config.OllamaConfig
 }
 
-func NewHandler(r *repository.Queries, c *asynq.Client, o *config.OllamaConfig) *Handler {
+func NewHandler(repo *repository.Queries, client *asynq.Client, ollamaCfg *config.OllamaConfig) *Handler {
 	return &Handler{
-		Repo:         *r,
-		Client:       c,
-		OllamaConfig: o,
+		Repo:         *repo,
+		Client:       client,
+		OllamaConfig: ollamaCfg,
 	}
 }

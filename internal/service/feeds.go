@@ -237,7 +237,7 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 }
 
 // GetFeed retrieves a feed and the user's subscription status.
-func (s *Service) GetFeed(ctx context.Context, r GetFeedRequest) (*Feed, error) {
+func (s *Service) GetFeed(ctx context.Context, r repository.GetUserFeedSubscriptionParams) (*Feed, error) {
 	feed, err := s.Repo.GetFeedByID(ctx, r.FeedID)
 	if err != nil {
 		return nil, fmt.Errorf("feed not found: %w", err)
@@ -245,7 +245,7 @@ func (s *Service) GetFeed(ctx context.Context, r GetFeedRequest) (*Feed, error) 
 
 	// check subscription
 	subAt := (*time.Time)(nil)
-	if uf, err := s.Repo.GetUserFeedSubscription(ctx, r.GetUserFeedSubscriptionParams); err == nil {
+	if uf, err := s.Repo.GetUserFeedSubscription(ctx, r); err == nil {
 		subAt = &uf.SubscribedAt
 	}
 
@@ -286,8 +286,8 @@ func (s *Service) DeleteFeed(ctx context.Context, r DeleteFeedRequest) error {
 }
 
 // SubscribeToFeed subscribes a user to a feed.
-func (s *Service) SubscribeToFeed(ctx context.Context, r SubscribeToFeedRequest) (*SubscibeToFeedResponse, error) {
-	sub, err := s.Repo.CreateUserFeedSubscription(ctx, r.CreateUserFeedSubscriptionParams)
+func (s *Service) SubscribeToFeed(ctx context.Context, r repository.CreateUserFeedSubscriptionParams) (*SubscibeToFeedResponse, error) {
+	sub, err := s.Repo.CreateUserFeedSubscription(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("failed subscribing: %w", err)
 	}
@@ -297,15 +297,15 @@ func (s *Service) SubscribeToFeed(ctx context.Context, r SubscribeToFeedRequest)
 }
 
 // UnsubscribeFromFeed removes a user's subscription.
-func (s *Service) UnsubscribeFromFeed(ctx context.Context, r UnsubscribeFromFeedRequest) error {
-	if err := s.Repo.DeleteUserFeedSubscription(ctx, r.DeleteUserFeedSubscriptionParams); err != nil {
+func (s *Service) UnsubscribeFromFeed(ctx context.Context, r repository.DeleteUserFeedSubscriptionParams) error {
+	if err := s.Repo.DeleteUserFeedSubscription(ctx, r); err != nil {
 		return fmt.Errorf("failed unsubscribing: %w", err)
 	}
 	return nil
 }
 
 // ListItemsByFeedID returns paginated items from a feed, including per-user like status.
-func (s *Service) ListItemsByFeedID(ctx context.Context, r ListItemsByFeedIDRequest) (*ListItemsResponse, error) {
+func (s *Service) ListItemsByFeedID(ctx context.Context, r repository.ListItemsByFeedIDForUserParams) (*ListItemsResponse, error) {
 	// total count
 	total, err := s.Repo.CountItemsByFeedID(ctx, r.FeedID)
 	if err != nil {
@@ -313,7 +313,7 @@ func (s *Service) ListItemsByFeedID(ctx context.Context, r ListItemsByFeedIDRequ
 	}
 
 	// fetch rows with like info
-	rows, err := s.Repo.ListItemsByFeedIDForUser(ctx, r.ListItemsByFeedIDForUserParams)
+	rows, err := s.Repo.ListItemsByFeedIDForUser(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("failed listing items for feed %s: %w", r.FeedID, err)
 	}

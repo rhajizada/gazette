@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rhajizada/gazette/internal/middleware"
@@ -34,13 +33,12 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.Service.ListUserLikedItems(r.Context(), service.ListUserLikedItemsRequest{
+	resp, err := h.Service.ListUserLikedItems(r.Context(),
 		repository.ListUserLikedItemsParams{
 			UserID: userID,
 			Limit:  params.Limit,
 			Offset: params.Offset,
-		},
-	})
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed listing liked items: %v", err), http.StatusInternalServerError)
 		return
@@ -88,7 +86,7 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 // @Description  Creates a like record for the current user on an item.
 // @Tags         Items
 // @Param        itemID  path      string  true  "Item UUID"
-// @Success      200     {object}  map[string]time.Time  "liked_at"
+// @Success      200     {object}  service.LikeItemResponse
 // @Failure      400     {object}  string
 // @Failure      409     {object}  string
 // @Failure      500     {object}  string
@@ -102,20 +100,18 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	likedAt, err := h.Service.LikeItem(r.Context(), service.LikeItemRequest{
+	likedAt, err := h.Service.LikeItem(r.Context(),
 		repository.CreateUserLikeParams{
 			UserID: userID,
 			ItemID: itemID,
-		},
-	})
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to like item: %v", err), http.StatusConflict)
 		return
 	}
 
-	resp := map[string]time.Time{"liked_at": *likedAt}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(likedAt)
 }
 
 // UnlikeItem removes a like from an item.
@@ -136,12 +132,11 @@ func (h *Handler) UnlikeItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.UnlikeItem(r.Context(), service.UnlikeItemRequest{
+	if err := h.Service.UnlikeItem(r.Context(),
 		repository.DeleteUserLikeParams{
 			UserID: userID,
 			ItemID: itemID,
-		},
-	}); err != nil {
+		}); err != nil {
 		http.Error(w, fmt.Sprintf("failed to unlike item: %v", err), http.StatusInternalServerError)
 		return
 	}

@@ -18,26 +18,6 @@ type Collection struct {
 	LastUpdated time.Time `json:"last_updated"`
 }
 
-// CreateCollectionRequest wraps parameters to create collection
-type CreateCollectionRequest struct {
-	repository.CreateCollectionParams
-}
-
-// ListCollectionsRequest wraps parameters to list collections
-type ListCollectionsRequest struct {
-	repository.ListCollectionsByUserParams
-}
-
-// AddItemToCollectionRequest wraps parameters to add item to specified collection
-type AddItemToCollectionRequest struct {
-	repository.AddItemToCollectionParams
-}
-
-// RemoveItemFromCollectionRequest wraps parameters to remove item from  specified collection
-type RemoveItemFromCollectionRequest struct {
-	repository.RemoveItemFromCollectionParams
-}
-
 // ListCollectionItemsRequest wraps parameters to list collection items
 type ListCollectionItemsRequest struct {
 	UserID uuid.UUID
@@ -66,7 +46,7 @@ type AddItemToCollectionResponse struct {
 }
 
 // ListCollections retrieves a paginated list of collections for a user.
-func (s *Service) ListCollections(ctx context.Context, r ListCollectionsRequest) (*ListCollectionsResponse, error) {
+func (s *Service) ListCollections(ctx context.Context, r repository.ListCollectionsByUserParams) (*ListCollectionsResponse, error) {
 	total, err := s.Repo.CountCollectionsByUserID(ctx, r.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed counting collections: %w", err)
@@ -100,8 +80,8 @@ func (s *Service) ListCollections(ctx context.Context, r ListCollectionsRequest)
 }
 
 // CreateCollection creates a new collection.
-func (s *Service) CreateCollection(ctx context.Context, r CreateCollectionRequest) (*Collection, error) {
-	col, err := s.Repo.CreateCollection(ctx, r.CreateCollectionParams)
+func (s *Service) CreateCollection(ctx context.Context, r repository.CreateCollectionParams) (*Collection, error) {
+	col, err := s.Repo.CreateCollection(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating collection: %w", err)
 	}
@@ -136,8 +116,8 @@ func (s *Service) DeleteCollection(ctx context.Context, collectionID uuid.UUID) 
 }
 
 // AddItemToCollection adds an item to a collection.
-func (s *Service) AddItemToCollection(ctx context.Context, r AddItemToCollectionRequest) (*AddItemToCollectionResponse, error) {
-	rec, err := s.Repo.AddItemToCollection(ctx, r.AddItemToCollectionParams)
+func (s *Service) AddItemToCollection(ctx context.Context, r repository.AddItemToCollectionParams) (*AddItemToCollectionResponse, error) {
+	rec, err := s.Repo.AddItemToCollection(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("failed adding item to collection: %w", err)
 	}
@@ -147,8 +127,8 @@ func (s *Service) AddItemToCollection(ctx context.Context, r AddItemToCollection
 }
 
 // RemoveItemFromCollection removes an item from a collection.
-func (s *Service) RemoveItemFromCollection(ctx context.Context, r RemoveItemFromCollectionRequest) error {
-	if err := s.Repo.RemoveItemFromCollection(ctx, r.RemoveItemFromCollectionParams); err != nil {
+func (s *Service) RemoveItemFromCollection(ctx context.Context, r repository.RemoveItemFromCollectionParams) error {
+	if err := s.Repo.RemoveItemFromCollection(ctx, r); err != nil {
 		return fmt.Errorf("failed removing item from collection: %w", err)
 	}
 	return nil

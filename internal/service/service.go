@@ -10,9 +10,9 @@ type Service struct {
 	Client *asynq.Client
 }
 
-func New(r *repository.Queries, c *asynq.Client) *Service {
+func New(repo *repository.Queries, client *asynq.Client) *Service {
 	return &Service{
-		Repo:   *r,
-		Client: c,
+		Repo:   *repo,
+		Client: client,
 	}
 }

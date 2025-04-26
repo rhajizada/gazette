@@ -31,13 +31,12 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.Service.ListCollections(r.Context(), service.ListCollectionsRequest{
+	resp, err := h.Service.ListCollections(r.Context(),
 		repository.ListCollectionsByUserParams{
 			UserID: userID,
 			Limit:  params.Limit,
 			Offset: params.Offset,
-		},
-	})
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed listing collections: %v", err), http.StatusInternalServerError)
 		return
@@ -51,7 +50,7 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 // @Summary      Create collection
 // @Description  Creates a named collection for the current user.
 // @Tags         Collections
-// @Param        body    body      service.CreateCollectionRequest  true  "Collection name"
+// @Param        body    body      CreateCollectionRequest  true  "Collection name"
 // @Success      200     {object}  service.Collection
 // @Failure      400     {object}  string
 // @Failure      500     {object}  string
@@ -60,14 +59,17 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 
-	var req service.CreateCollectionRequest
+	var req CreateCollectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("bad JSON: %v", err), http.StatusBadRequest)
 		return
 	}
-	req.UserID = userID
+	query := repository.CreateCollectionParams{
+		UserID: userID,
+		Name:   req.Name,
+	}
 
-	col, err := h.Service.CreateCollection(r.Context(), req)
+	col, err := h.Service.CreateCollection(r.Context(), query)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed creating collection: %v", err), http.StatusInternalServerError)
 		return
@@ -136,7 +138,7 @@ func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
 // @Tags         Collections
 // @Param        collectionID  path  string  true  "Collection UUID"
 // @Param        itemID        path  string  true  "Item UUID"
-// @Success      200  {object}  object service.AddItemToCollectionResponse
+// @Success      200           {object}  service.AddItemToCollectionResponse
 // @Failure      400  {object}  string
 // @Failure      500  {object}  string
 // @Security     BearerAuth
@@ -154,12 +156,11 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("updating %s %s", colID, itemID)
 
-	resp, err := h.Service.AddItemToCollection(r.Context(), service.AddItemToCollectionRequest{
+	resp, err := h.Service.AddItemToCollection(r.Context(),
 		repository.AddItemToCollectionParams{
 			CollectionID: colID,
 			ItemID:       itemID,
-		},
-	})
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed adding item: %v", err), http.StatusInternalServerError)
 		return
@@ -191,12 +192,11 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.Service.RemoveItemFromCollection(r.Context(), service.RemoveItemFromCollectionRequest{
+	if err := h.Service.RemoveItemFromCollection(r.Context(),
 		repository.RemoveItemFromCollectionParams{
 			CollectionID: colID,
 			ItemID:       itemID,
-		},
-	}); err != nil {
+		}); err != nil {
 		http.Error(w, fmt.Sprintf("failed removing item: %v", err), http.StatusInternalServerError)
 		return
 	}

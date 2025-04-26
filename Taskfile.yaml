@@ -53,5 +53,5 @@ tasks:
     desc: Generate swagger docs
     cmds:
       - |
-        swag init -g cmd/server/main.go
+        swag init --parseInternal --parseDependency -g cmd/server/main.go
     dir: ./

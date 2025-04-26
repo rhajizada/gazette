@@ -11,25 +11,10 @@ import (
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
-// ListUserLikedItemsRequest wraps parameters for listing items liked by a user.
-type ListUserLikedItemsRequest struct {
-	repository.ListUserLikedItemsParams
-}
-
 // GetItemRequest wraps parameters to retrieve a single item and its like status.
 type GetItemRequest struct {
 	UserID uuid.UUID
 	ItemID uuid.UUID
-}
-
-// LikeItemRequest wraps parameters to like an item.
-type LikeItemRequest struct {
-	repository.CreateUserLikeParams
-}
-
-// UnlikeItemRequest wraps parameters to unlike an item.
-type UnlikeItemRequest struct {
-	repository.DeleteUserLikeParams
 }
 
 // Item is the common model for items in API responses
@@ -62,8 +47,13 @@ type ListItemsResponse struct {
 	Items      []Item `json:"items"`
 }
 
+// LikeItemResponse wraps response which inlude liked at time
+type LikeItemResponse struct {
+	LikedAt time.Time `json:"liked_at"`
+}
+
 // ListUserLikedItems returns paginated items the user has liked, with liked timestamps.
-func (s *Service) ListUserLikedItems(ctx context.Context, r ListUserLikedItemsRequest) (*ListItemsResponse, error) {
+func (s *Service) ListUserLikedItems(ctx context.Context, r repository.ListUserLikedItemsParams) (*ListItemsResponse, error) {
 	// count total liked items
 	total, err := s.Repo.CountLikedItems(ctx, r.UserID)
 	if err != nil {
@@ -71,7 +61,7 @@ func (s *Service) ListUserLikedItems(ctx context.Context, r ListUserLikedItemsRe
 	}
 
 	// fetch liked items
-	rows, err := s.Repo.ListUserLikedItems(ctx, r.ListUserLikedItemsParams)
+	rows, err := s.Repo.ListUserLikedItems(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("failed listing liked items: %w", err)
 	}
@@ -164,17 +154,18 @@ func (s *Service) GetItem(ctx context.Context, r GetItemRequest) (*Item, error) 
 }
 
 // LikeItem marks an item as liked by the user.
-func (s *Service) LikeItem(ctx context.Context, r LikeItemRequest) (*time.Time, error) {
-	like, err := s.Repo.CreateUserLike(ctx, r.CreateUserLikeParams)
+func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParams) (*LikeItemResponse, error) {
+	like, err := s.Repo.CreateUserLike(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to like item: %w", err)
 	}
-	return &like.LikedAt, nil
+	resp := LikeItemResponse{LikedAt: like.LikedAt}
+	return &resp, nil
 }
 
 // UnlikeItem removes a like from an item.
-func (s *Service) UnlikeItem(ctx context.Context, r UnlikeItemRequest) error {
-	if err := s.Repo.DeleteUserLike(ctx, r.DeleteUserLikeParams); err != nil {
+func (s *Service) UnlikeItem(ctx context.Context, r repository.DeleteUserLikeParams) error {
+	if err := s.Repo.DeleteUserLike(ctx, r); err != nil {
 		return fmt.Errorf("failed to unlike item: %w", err)
 	}
 	return nil

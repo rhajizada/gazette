@@ -70,13 +70,13 @@ func main() {
 
 	rq := repository.New(pool)
 	conn := database.CreateRedisClient(&cfg.Redis)
-	c := *asynq.NewClient(conn)
-	err = c.Ping()
+	client := *asynq.NewClient(conn)
+	err = client.Ping()
 	if err != nil {
 		log.Panicf("failed to connect to Redis: %v", err)
 	}
 
-	v, err := oauth.GetVerifier(&cfg.OAuth)
+	verifier, err := oauth.GetVerifier(&cfg.OAuth)
 	if err != nil {
 		log.Panicf("failed to initialize auth provider: %v", err)
 	}
@@ -87,28 +87,28 @@ func main() {
 	}
 
 	// Create handler
-	s := service.New(rq, &c)
-	h := handler.New(s, []byte(cfg.SecretKey), v, oauthCfg)
+	service := service.New(rq, &client)
+	handler := handler.New(service, []byte(cfg.SecretKey), verifier, oauthCfg)
 
-	r := http.NewServeMux()
-	feedsRoutes := router.RegisterFeedRoutes(h)
-	itemsRoutes := router.RegisterItemRoutes(h)
-	collectionsRoutes := router.RegisterCollectionRoutes(h)
-	oauthRoutes := router.RegisterOAuthRoutes(h)
+	mux := http.NewServeMux()
+	feedsAPIRoutes := router.RegisterFeedsAPI(handler)
+	itemsAPIRoutes := router.RegisterItemsAPI(handler)
+	collectionsAPIRoutes := router.RegisterCollectionsAPI(handler)
+	oauthRoutes := router.RegisterOAuthRoutes(handler)
 
 	loggingMiddleware := middleware.Logging()
 	authMiddleware := middleware.APIAuthMiddleware([]byte(cfg.SecretKey))
 
-	r.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsRoutes)))
-	r.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsRoutes)))
-	r.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsRoutes)))
-	r.Handle("/api/docs/", httpSwagger.WrapHandler)
-	r.Handle("/oauth/", http.StripPrefix("/oauth", oauthRoutes))
-	r.Handle("/", http.HandlerFunc(h.IndexHandler))
-	// Start the server
+	mux.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsAPIRoutes)))
+	mux.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsAPIRoutes)))
+	mux.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsAPIRoutes)))
+	mux.Handle("/api/docs/", httpSwagger.WrapHandler)
+	mux.Handle("/oauth/", http.StripPrefix("/oauth", oauthRoutes))
+	mux.Handle("/", http.HandlerFunc(handler.IndexHandler))
+
 	log.Printf("server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
-	if err := http.ListenAndServe(addr, loggingMiddleware(r)); err != nil {
+	if err := http.ListenAndServe(addr, loggingMiddleware(mux)); err != nil {
 		log.Panicf("could not start server: %s\n", err.Error())
 	}
 }
