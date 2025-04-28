@@ -104,7 +104,7 @@ func main() {
 	mux.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsAPIRoutes)))
 	mux.Handle("/api/docs/", httpSwagger.WrapHandler)
 	mux.Handle("/oauth/", http.StripPrefix("/oauth", oauthRoutes))
-	mux.Handle("/", http.HandlerFunc(handler.IndexHandler))
+	mux.Handle("/", http.HandlerFunc(handler.WebHandler))
 
 	log.Printf("server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)

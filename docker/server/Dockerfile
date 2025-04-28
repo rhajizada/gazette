@@ -1,3 +1,13 @@
+FROM node:18-alpine AS web-builder
+
+WORKDIR /src/frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend .
+RUN npm run build
+
 FROM golang:1.24-alpine AS builder
 WORKDIR /src
 ARG VERSION
@@ -7,7 +17,8 @@ RUN go mod download
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux \
-  go build -ldflags="-s -w -X main.Version=${VERSION}" \
+  go build \
+  -ldflags="-s -w -X main.Version=${VERSION}" \
   -o /src/bin/server \
   ./cmd/server
 
@@ -17,7 +28,7 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
 COPY --from=builder /src/bin/server .
-
 COPY --from=builder /src/data/sql/migrations data/sql/migrations
+COPY --from=web-builder /src/frontend/dist data/public
 
 ENTRYPOINT ["./server"]

@@ -54,4 +54,5 @@ tasks:
     cmds:
       - |
         swag init --parseInternal --parseDependency -g cmd/server/main.go
+        npx swagger-typescript-api generate -p ./docs/swagger.json -o ./web/src/api --modular
     dir: ./

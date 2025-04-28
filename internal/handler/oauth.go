@@ -99,7 +99,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseURL := "/"
+	baseURL := "/callback"
 	params := url.Values{}
 	params.Add("token", appToken)
 
