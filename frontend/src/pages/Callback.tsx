@@ -13,7 +13,7 @@ export default function CallbackPage() {
     const token = params.get("token");
     if (token) {
       login(token);
-      nav("/", { replace: true });
+      nav("/feeds", { replace: true });
     } else {
       nav("/login", { replace: true });
     }

@@ -1,4 +1,4 @@
-FROM node:18-alpine AS web-builder
+FROM node:20-alpine AS node-builder
 
 WORKDIR /src/frontend
 
@@ -29,6 +29,6 @@ WORKDIR /app
 
 COPY --from=builder /src/bin/server .
 COPY --from=builder /src/data/sql/migrations data/sql/migrations
-COPY --from=web-builder /src/frontend/dist data/public
+COPY --from=node-builder /src/frontend/dist data/public
 
 ENTRYPOINT ["./server"]

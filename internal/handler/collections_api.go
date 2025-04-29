@@ -55,7 +55,7 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 // @Failure      400     {object}  string
 // @Failure      500     {object}  string
 // @Security     BearerAuth
-// @Router       /api/collections/ [post]
+// @Router       /api/collections [post]
 func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 

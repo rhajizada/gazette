@@ -59,9 +59,7 @@
                         }
                     }
                 }
-            }
-        },
-        "/api/collections/": {
+            },
             "post": {
                 "security": [
                     {

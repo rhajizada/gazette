@@ -9,7 +9,7 @@ import (
 
 func RegisterFeedsAPI(h *handler.Handler) *http.ServeMux {
 	router := http.NewServeMux()
-	router.HandleFunc("GET /feeds/", h.ListFeeds)
+	router.HandleFunc("GET /feeds", h.ListFeeds)
 	router.HandleFunc("POST /feeds/", h.CreateFeed)
 	router.HandleFunc("GET /feeds/{feedID}", h.GetFeedByID)
 	router.HandleFunc("DELETE /feeds/{feedID}", h.DeleteFeedByID)

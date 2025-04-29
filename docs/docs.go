@@ -67,9 +67,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/collections/": {
+            },
             "post": {
                 "security": [
                     {

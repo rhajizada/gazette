@@ -228,7 +228,6 @@ paths:
       summary: List collections
       tags:
       - Collections
-  /api/collections/:
     post:
       description: Creates a named collection for the current user.
       parameters:

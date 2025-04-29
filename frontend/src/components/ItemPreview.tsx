@@ -1,0 +1,99 @@
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { toast } from "sonner"
+import { Heart } from "lucide-react"
+
+interface ItemPreviewProps {
+  item: ItemModel
+}
+
+export function ItemPreview({ item }: ItemPreviewProps) {
+  const { api } = useAuth()
+  const navigate = useNavigate()
+  const [liked, setLiked] = useState<boolean>(item.liked ?? false)
+  const [loading, setLoading] = useState<boolean>(false)
+
+  const toggleLike = async () => {
+    if (loading) return
+    setLoading(true)
+    try {
+      if (liked) {
+        await api.itemsLikeDelete(item.id!, { format: "json" })
+        setLiked(false)
+      } else {
+        await api.itemsLikeCreate(item.id!, { format: "json" })
+        setLiked(true)
+      }
+    } catch (err) {
+      console.error("Failed to toggle like:", err)
+      toast.error("Could not update like status")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="max-w-sm w-full hover:shadow-md transition-shadow cursor-pointer">
+      {/* Preview Image */}
+      {item.image?.url && (
+        <img
+          src={item.image.url}
+          alt={item.image.title ?? item.title}
+          className="w-full h-32 object-cover"
+          onClick={() => navigate(`/items/${item.id}`)}
+        />
+      )}
+
+      <CardHeader onClick={() => navigate(`/items/${item.id}`)}>
+        <h3 className="text-lg font-medium truncate">{item.title}</h3>
+      </CardHeader>
+
+      {item.description && (
+        <CardContent className="pt-0">
+          <p className="text-gray-700 line-clamp-2">{item.description}</p>
+        </CardContent>
+      )}
+
+      {item.authors && item.authors.length > 0 && (
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap gap-1">
+            {item.authors.map((a, i) => (
+              <span key={i} className="px-2 py-0.5 bg-gray-100 text-xs rounded-full">
+                {a.name || a.email}
+              </span>
+            ))}
+          </div>
+        </CardContent>
+      )}
+
+      {item.published_parsed && (
+        <CardContent className="pt-2">
+          <p className="text-sm text-gray-500">
+            {new Date(item.published_parsed).toLocaleDateString()}
+          </p>
+        </CardContent>
+      )}
+
+      <CardFooter className="pt-0 flex items-center justify-between">
+        <button
+          onClick={toggleLike}
+          disabled={loading}
+          aria-label={liked ? "Unlike item" : "Like item"}
+          className={`p-2 rounded-full transition-colors ${liked ? "text-red-500 hover:bg-red-100" : "text-gray-500 hover:bg-gray-100"
+            } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+        >
+          <Heart fill={liked ? "currentColor" : "none"} strokeWidth={2} className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => navigate(`/items/${item.id}`)}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Read
+        </button>
+      </CardFooter>
+    </Card>
+  )
+}
