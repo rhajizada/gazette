@@ -1,8 +1,8 @@
-import { Link, Navigate } from "react-router-dom"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
 import { useAuth } from "@/context/AuthContext"
+import { cn } from "@/lib/utils"
 import { jwtDecode } from "jwt-decode"
+import { Link, Navigate } from "react-router-dom"
 
 export function Navbar() {
   const { token } = useAuth()
@@ -11,7 +11,6 @@ export function Navbar() {
     return <Navigate to="/login" replace />
   }
 
-  // Decode username from token
   let username: string | null = null
   try {
     const decoded = jwtDecode<{ name?: string }>(token)
@@ -29,7 +28,6 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo */}
         <Link to="/" className="flex items-center">
           <img
             src="/logo512.png"
@@ -72,4 +70,3 @@ export function Navbar() {
     </nav>
   )
 }
-

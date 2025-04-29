@@ -1,12 +1,8 @@
-import { useEffect, useState, useCallback } from "react"
-import { useAuth } from "../context/AuthContext"
-import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedModel } from "../api/data-contracts"
-import { Spinner } from "@/components/ui/spinner"
 import { FeedPreview } from "@/components/FeedPreview"
+import { Footer } from "@/components/Footer"
 import { Navbar } from "@/components/Navbar"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
 import {
   Pagination,
   PaginationContent,
@@ -16,6 +12,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Spinner } from "@/components/ui/spinner"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
+import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedModel } from "../api/data-contracts"
+import { useAuth } from "../context/AuthContext"
 
 export default function Feeds() {
   const { api, logout } = useAuth()
@@ -177,6 +178,7 @@ export default function Feeds() {
           </div>
         )}
       </div>
+      <Footer />
     </>
   )
 }

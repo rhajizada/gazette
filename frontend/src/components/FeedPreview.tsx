@@ -1,11 +1,11 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
-import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Star } from "lucide-react"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts"
+import { useAuth } from "../context/AuthContext"
 
 interface FeedProps {
   feed: FeedType
@@ -44,54 +44,55 @@ export function FeedPreview({ feed }: FeedProps) {
   return (
     <Card
       onClick={handleCardClick}
-      className="group flex flex-col h-full relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer"
+      className="group flex flex-col h-full overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer"
     >
-      {feed.image?.url && (
-        <div className="relative h-48 w-full flex-shrink-0">
+      <CardContent className="flex-1 relative pt-4 px-4 pb-2">
+        {/* Floating thumbnail */}
+        {feed.image?.url && (
           <img
             src={feed.image.url}
             alt={feed.image.title ?? feed.title}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="float-left w-24 h-24 object-cover rounded-lg mr-4 mb-4"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent opacity-50" />
-          <div className="absolute bottom-4 left-4">
-            <h3 className="text-lg font-bold leading-tight text-white">{feed.title}</h3>
-          </div>
-        </div>
-      )}
-
-      <CardContent className="flex-1 pt-4 px-4 pb-2">
-        {feed.description && (
-          <p className="text-gray-700 line-clamp-3 mb-3">{feed.description}</p>
         )}
 
-        <div className="flex flex-wrap gap-2 mb-2">
+        {/* Title */}
+        <h3 className="text-lg font-bold text-gray-900 hover:text-primary transition-colors">
+          {feed.title}
+        </h3>
+
+        {/* Description wraps around image */}
+        {feed.description && (
+          <p className="text-gray-700 leading-relaxed mt-2">
+            {feed.description}
+          </p>
+        )}
+
+        {/* Meta */}
+        <div className="flex flex-wrap gap-2 mt-4">
           {feed.categories?.slice(0, 3).map((cat, _) => (
             <Badge>
               {cat}
             </Badge>
           ))}
         </div>
-
         {feed.authors && feed.authors.length > 0 && (
-          <p className="text-sm text-gray-500 mb-1">
-            <strong>Author{feed.authors.length > 1 ? "s" : ""}:</strong>{" "}
-            {feed.authors.map((a) => a.name || a.email).join(", ")}
+          <p className="text-sm text-gray-500 mt-2">
+            <strong>Author{feed.authors.length > 1 ? "s" : ""}:</strong> {feed.authors.map(a => a.name || a.email).join(", ")}
           </p>
         )}
-
         {feed.language && (
-          <p className="text-sm text-gray-500 mb-1">
+          <p className="text-sm text-gray-500 mt-1">
             <strong>Language:</strong> {feed.language}
           </p>
         )}
-
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 mt-1">
           Last updated: {feed.updated_parsed && new Date(feed.updated_parsed).toLocaleDateString()}
         </p>
       </CardContent>
 
-      <CardFooter className="px-4 py-2 flex items-center justify-end space-x-4">
+      <CardFooter className="px-4 py-2 flex items-center justify-end">
         <Button
           size="sm"
           onClick={handleToggle}

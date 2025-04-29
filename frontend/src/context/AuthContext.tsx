@@ -1,12 +1,12 @@
+import { jwtDecode } from "jwt-decode";
 import {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   ReactNode,
+  useContext,
+  useEffect,
   useMemo,
+  useState,
 } from "react";
-import { jwtDecode } from "jwt-decode";
 import { Api } from "../api/Api";
 
 interface AuthContextType {

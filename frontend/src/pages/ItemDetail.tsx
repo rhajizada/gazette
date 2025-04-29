@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react"
-import { useParams, Navigate } from "react-router-dom"
-import { Spinner } from "@/components/ui/spinner"
-import { useAuth } from "../context/AuthContext"
+import { Footer } from "@/components/Footer"
 import { Navbar } from "@/components/Navbar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+import { Spinner } from "@/components/ui/spinner"
 import { Heart } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Navigate, useParams } from "react-router-dom"
+import { toast } from "sonner"
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts"
+import { useAuth } from "../context/AuthContext"
 
 export default function ItemDetail() {
   const { itemID } = useParams<{ itemID: string }>()
@@ -18,7 +19,6 @@ export default function ItemDetail() {
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
 
-  // Like state
   const [liked, setLiked] = useState<boolean>(false)
   const [likeLoading, setLikeLoading] = useState<boolean>(false)
 
@@ -188,6 +188,7 @@ export default function ItemDetail() {
           </aside>
         )}
       </div>
+      <Footer />
     </>
   )
 }

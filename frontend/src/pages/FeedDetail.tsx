@@ -1,20 +1,21 @@
-import { useEffect, useState, useCallback } from "react"
-import { useParams, Navigate } from "react-router-dom"
-import { Spinner } from "@/components/ui/spinner"
+import { Footer } from "@/components/Footer"
 import { ItemPreview } from "@/components/ItemPreview"
-import { useAuth } from "../context/AuthContext"
 import { Navbar } from "@/components/Navbar"
+import { Button } from "@/components/ui/button"
 import {
   Pagination,
   PaginationContent,
-  PaginationItem,
-  PaginationPrevious,
   PaginationEllipsis,
+  PaginationItem,
   PaginationLink,
   PaginationNext,
+  PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Card, CardContent } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner"
 import { Star } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { Navigate, useParams } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
 import type {
   GithubComRhajizadaGazetteInternalServiceFeed as FeedType,
@@ -75,7 +76,9 @@ export default function FeedDetail() {
       .finally(() => setItemsLoading(false))
   }, [api, feedID, page, logout])
 
-  useEffect(() => { fetchItems() }, [fetchItems])
+  useEffect(() => {
+    fetchItems()
+  }, [fetchItems])
 
   const toggleSub = async () => {
     if (!feed || subLoading) return
@@ -98,52 +101,58 @@ export default function FeedDetail() {
   if (loading) return <Loader />
   if (notFound || !feed) return <Navigate to="*" replace />
 
-  // Pagination UI
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const pages: (number | "ellipsis")[] = []
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i)
   } else if (page <= 4) pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages)
-  else if (page > totalPages - 4) pages.push(1, "ellipsis", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+  else if (page > totalPages - 4)
+    pages.push(
+      1,
+      "ellipsis",
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages
+    )
   else pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages)
 
   return (
     <>
       <Navbar />
-      <Card className="relative overflow-hidden rounded-2xl shadow-lg mx-auto max-w-4xl mb-8">
-        {feed.image?.url && (
-          <div className="relative h-64 w-full">
-            <img
-              src={feed.image.url}
-              alt={feed.title}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent opacity-60" />
-          </div>
+
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <h1 className="text-4xl font-bold text-black">{feed.title}</h1>
+        {feed.description && (
+          <p className="text-lg text-gray-700 mt-2">{feed.description}</p>
         )}
-        <CardContent className="absolute bottom-4 left-4 text-white">
-          <h1 className="text-3xl font-bold truncate">{feed.title}</h1>
-          <p className="mt-2 line-clamp-2 text-sm">{feed.description}</p>
-
-          <button
-            onClick={toggleSub}
-            disabled={subLoading}
-            className="mt-4 inline-flex items-center bg-white text-gray-800 px-3 py-1 rounded-full shadow hover:bg-gray-100 transition disabled:opacity-50"
-          >
-            <Star
-              fill={subscribed ? "currentColor" : "none"}
-              className={`w-5 h-5 mr-2 ${subscribed ? "text-yellow-400" : "text-gray-800"}`}
-            />
-            {subscribed ? "Unsubscribe" : "Subscribe"}
-          </button>
-
-        </CardContent>
-      </Card>
-
+        {feed.updated_parsed && (
+          <p className="text-sm text-gray-500 mt-1">Last updated: {new Date(feed.updated_parsed).toLocaleDateString()}</p>
+        )}
+        <br />
+        <Button
+          size="sm"
+          onClick={toggleSub}
+          disabled={subLoading}
+          className="inline-flex items-center bg-white text-gray-800 px-3 py-1 shadow hover:bg-gray-100 transition disabled:opacity-50"
+        >
+          <Star
+            fill={subscribed ? "currentColor" : "none"}
+            className={`w-5 h-5 mr-2 ${subscribed ? "text-yellow-400" : "text-gray-800"
+              }`}
+          />
+          {subscribed ? "Unsubscribe" : "Subscribe"}
+        </Button>
+      </div>
       <div className="mx-auto max-w-5xl px-6">
-        {itemsLoading ? <Loader /> : (
-          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
-            {items.map(item => <ItemPreview key={item.id} item={item} />)}
+        {itemsLoading ? (
+          <Loader />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {items.map((item) => (
+              <ItemPreview key={item.id} item={item} />
+            ))}
           </div>
         )}
 
@@ -154,9 +163,18 @@ export default function FeedDetail() {
                 <PaginationItem>
                   <PaginationPrevious onClick={() => setPage(page - 1)} aria-disabled={page === 1} />
                 </PaginationItem>
-                {pages.map((p, i) => p === "ellipsis"
-                  ? <PaginationItem key={i}><PaginationEllipsis /></PaginationItem>
-                  : <PaginationItem key={p}><PaginationLink onClick={() => setPage(p as number)} isActive={p === page}>{p}</PaginationLink></PaginationItem>
+                {pages.map((p, i) =>
+                  p === "ellipsis" ? (
+                    <PaginationItem key={i}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink onClick={() => setPage(p as number)} isActive={p === page}>
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
                 )}
                 <PaginationItem>
                   <PaginationNext onClick={() => setPage(page + 1)} aria-disabled={page === totalPages} />
@@ -166,6 +184,7 @@ export default function FeedDetail() {
           </div>
         )}
       </div>
+      <Footer />
     </>
   )
 }
@@ -177,5 +196,4 @@ function Loader() {
     </div>
   )
 }
-
 
