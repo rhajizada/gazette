@@ -2,9 +2,9 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { toast } from "sonner"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Heart } from "lucide-react"
+import { toast } from "sonner"
 
 interface ItemPreviewProps {
   item: ItemModel
@@ -36,48 +36,42 @@ export function ItemPreview({ item }: ItemPreviewProps) {
   }
 
   return (
-    <Card className="max-w-sm w-full hover:shadow-md transition-shadow cursor-pointer">
-      {/* Preview Image */}
-      {item.image?.url && (
-        <img
-          src={item.image.url}
-          alt={item.image.title ?? item.title}
-          className="w-full h-32 object-cover"
-          onClick={() => navigate(`/items/${item.id}`)}
-        />
-      )}
+    <Card className="group overflow-hidden rounded-2xl shadow hover:shadow-lg transition-shadow duration-300 cursor-pointer">
+      <CardContent className="flex break-words">
+        {/* Thumbnail on left */}
+        {item.image?.url && (
+          <img
+            src={item.image.url}
+            alt={item.image.title ?? item.title}
+            className="w-24 h-24 object-cover rounded-lg mr-4 flex-shrink-0"
+            onClick={() => navigate(`/items/${item.id}`)}
+          />
+        )}
+        <div onClick={() => navigate(`/items/${item.id}`)} className="flex-1 break-words">
+          <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors">
+            {item.title}
+          </h3>
+          {item.description && (
+            <p className="text-gray-700 line-clamp-3 mt-1 break-words">
+              {item.description}
+            </p>
+          )}
+          {item.authors && item.authors.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {item.authors.map((a, i) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 bg-gray-100 text-xs rounded-full"
+                >
+                  {a.name || a.email}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
 
-      <CardHeader onClick={() => navigate(`/items/${item.id}`)}>
-        <h3 className="text-lg font-medium truncate">{item.title}</h3>
-      </CardHeader>
-
-      {item.description && (
-        <CardContent className="pt-0">
-          <p className="text-gray-700 line-clamp-2">{item.description}</p>
-        </CardContent>
-      )}
-
-      {item.authors && item.authors.length > 0 && (
-        <CardContent className="pt-0">
-          <div className="flex flex-wrap gap-1">
-            {item.authors.map((a, i) => (
-              <span key={i} className="px-2 py-0.5 bg-gray-100 text-xs rounded-full">
-                {a.name || a.email}
-              </span>
-            ))}
-          </div>
-        </CardContent>
-      )}
-
-      {item.published_parsed && (
-        <CardContent className="pt-2">
-          <p className="text-sm text-gray-500">
-            {new Date(item.published_parsed).toLocaleDateString()}
-          </p>
-        </CardContent>
-      )}
-
-      <CardFooter className="pt-0 flex items-center justify-between">
+      <CardFooter className="px-4 py-2 flex items-center justify-between">
         <button
           onClick={toggleLike}
           disabled={loading}
@@ -85,15 +79,19 @@ export function ItemPreview({ item }: ItemPreviewProps) {
           className={`p-2 rounded-full transition-colors ${liked ? "text-red-500 hover:bg-red-100" : "text-gray-500 hover:bg-gray-100"
             } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <Heart fill={liked ? "currentColor" : "none"} strokeWidth={2} className="w-5 h-5" />
+          <Heart
+            fill={liked ? "currentColor" : "none"}
+            strokeWidth={2}
+            className="w-5 h-5"
+          />
         </button>
-        <button
-          onClick={() => navigate(`/items/${item.id}`)}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Read
-        </button>
+        {item.published_parsed && (
+          <span className="text-xs text-gray-500">
+            {new Date(item.published_parsed).toLocaleDateString()}
+          </span>
+        )}
       </CardFooter>
     </Card>
   )
 }
+

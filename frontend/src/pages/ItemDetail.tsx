@@ -159,7 +159,6 @@ export default function ItemDetail() {
           </div>
         </div>
 
-        {/* Sidebar attachments */}
         {item.enclosures && item.enclosures.length > 0 && (
           <aside>
             <h2 className="mt-0 scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight">

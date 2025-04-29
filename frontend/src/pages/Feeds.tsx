@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "../context/AuthContext"
 import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedModel } from "../api/data-contracts"
 import { Spinner } from "@/components/ui/spinner"
-import { Feed } from "@/components/Feed"
+import { FeedPreview } from "@/components/FeedPreview"
 import { Navbar } from "@/components/Navbar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -128,7 +128,7 @@ export default function Feeds() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {feeds.map((f) => (
-              <Feed key={f.id} feed={f} />
+              <FeedPreview key={f.id} feed={f} />
             ))}
           </div>
         )}

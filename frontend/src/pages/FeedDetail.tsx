@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react"
 import { useParams, Navigate } from "react-router-dom"
 import { Spinner } from "@/components/ui/spinner"
@@ -14,6 +13,9 @@ import {
   PaginationLink,
   PaginationNext,
 } from "@/components/ui/pagination"
+import { Card, CardContent } from "@/components/ui/card"
+import { Star } from "lucide-react"
+
 import type {
   GithubComRhajizadaGazetteInternalServiceFeed as FeedType,
   GithubComRhajizadaGazetteInternalServiceItem as ItemModel,
@@ -26,11 +28,13 @@ export default function FeedDetail() {
 
   const [feed, setFeed] = useState<FeedType | null>(null)
   const [items, setItems] = useState<ItemModel[]>([])
-  const [itemTotal, setItemTotal] = useState(0)
-  const [itemPage, setItemPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [itemsLoading, setItemsLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const [subscribed, setSubscribed] = useState(false)
+  const [subLoading, setSubLoading] = useState(false)
 
   // Fetch feed details
   useEffect(() => {
@@ -38,15 +42,14 @@ export default function FeedDetail() {
     setLoading(true)
     api
       .feedsDetail(feedID, { secure: true, format: "json" })
-      .then((res) => setFeed(res.data))
+      .then((res) => {
+        setFeed(res.data)
+        setSubscribed(res.data.subscribed ?? false)
+      })
       .catch((err) => {
-        if (err.status === 404 || err.error === "Not Found") {
-          setNotFound(true)
-        } else if (err.error === "Unauthorized") {
-          logout()
-        } else {
-          console.error(err)
-        }
+        if (err.status === 404 || err.error === "Not Found") setNotFound(true)
+        else if (err.error === "Unauthorized") logout()
+        else console.error(err)
       })
       .finally(() => setLoading(false))
   }, [api, feedID, logout])
@@ -58,127 +61,105 @@ export default function FeedDetail() {
     api
       .feedsItemsList(
         feedID,
-        { limit: PAGE_SIZE, offset: (itemPage - 1) * PAGE_SIZE },
+        { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
         { secure: true, format: "json" }
       )
       .then((res) => {
         setItems(res.data.items ?? [])
-        setItemTotal(res.data.total_count ?? 0)
+        setTotal(res.data.total_count ?? 0)
       })
       .catch((err) => {
         if (err.error === "Unauthorized") logout()
         else console.error(err)
       })
       .finally(() => setItemsLoading(false))
-  }, [api, feedID, itemPage, logout])
+  }, [api, feedID, page, logout])
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner />
-      </div>
-    )
+  const toggleSub = async () => {
+    if (!feed || subLoading) return
+    setSubLoading(true)
+    try {
+      if (subscribed) {
+        await api.feedsSubscribeDelete(feed.id!, { format: "json" })
+        setSubscribed(false)
+      } else {
+        await api.feedsSubscribeUpdate(feed.id!, { format: "json" })
+        setSubscribed(true)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSubLoading(false)
+    }
   }
 
-  if (notFound || !feed) {
-    return <Navigate to="*" replace />
-  }
+  if (loading) return <Loader />
+  if (notFound || !feed) return <Navigate to="*" replace />
 
-  // Pagination logic
-  const totalPages = Math.ceil(itemTotal / PAGE_SIZE)
+  // Pagination UI
+  const totalPages = Math.ceil(total / PAGE_SIZE)
   const pages: (number | "ellipsis")[] = []
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i)
-  } else if (itemPage <= 4) {
-    pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages)
-  } else if (itemPage > totalPages - 4) {
-    pages.push(
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages
-    )
-  } else {
-    pages.push(
-      1,
-      "ellipsis",
-      itemPage - 1,
-      itemPage,
-      itemPage + 1,
-      "ellipsis",
-      totalPages
-    )
-  }
+  } else if (page <= 4) pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages)
+  else if (page > totalPages - 4) pages.push(1, "ellipsis", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+  else pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages)
 
   return (
     <>
       <Navbar />
-      <div className="p-6 space-y-6">
-        <header className="space-y-1">
-          <h1 className="text-2xl font-semibold">{feed.title}</h1>
-          {feed.updated_parsed && (
-            <p className="text-sm text-gray-500">
-              Last updated: {new Date(feed.updated_parsed).toLocaleString()}
-            </p>
-          )}
-        </header>
+      <Card className="relative overflow-hidden rounded-2xl shadow-lg mx-auto max-w-4xl mb-8">
+        {feed.image?.url && (
+          <div className="relative h-64 w-full">
+            <img
+              src={feed.image.url}
+              alt={feed.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent opacity-60" />
+          </div>
+        )}
+        <CardContent className="absolute bottom-4 left-4 text-white">
+          <h1 className="text-3xl font-bold truncate">{feed.title}</h1>
+          <p className="mt-2 line-clamp-2 text-sm">{feed.description}</p>
 
-        <section>
-          {itemsLoading ? (
-            <Spinner />
-          ) : items.length === 0 ? (
-            <p className="text-center text-gray-500">No items in this feed.</p>
-          ) : (
-            // Updated to four columns
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {items.map((item) => (
-                <ItemPreview key={item.id} item={item} />
-              ))}
-            </div>
-          )}
-        </section>
+          <button
+            onClick={toggleSub}
+            disabled={subLoading}
+            className="mt-4 inline-flex items-center bg-white text-gray-800 px-3 py-1 rounded-full shadow hover:bg-gray-100 transition disabled:opacity-50"
+          >
+            <Star
+              fill={subscribed ? "currentColor" : "none"}
+              className={`w-5 h-5 mr-2 ${subscribed ? "text-yellow-400" : "text-gray-800"}`}
+            />
+            {subscribed ? "Unsubscribe" : "Subscribe"}
+          </button>
 
-        {/* Pagination controls */}
+        </CardContent>
+      </Card>
+
+      <div className="mx-auto max-w-5xl px-6">
+        {itemsLoading ? <Loader /> : (
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
+            {items.map(item => <ItemPreview key={item.id} item={item} />)}
+          </div>
+        )}
+
         {totalPages > 1 && (
-          <div className="flex justify-center">
+          <div className="mt-8 flex justify-center">
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setItemPage(itemPage - 1)}
-                    aria-disabled={itemPage === 1}
-                    tabIndex={itemPage === 1 ? -1 : undefined}
-                    className={itemPage === 1 ? "pointer-events-none opacity-50" : undefined}
-                  />
+                  <PaginationPrevious onClick={() => setPage(page - 1)} aria-disabled={page === 1} />
                 </PaginationItem>
-                {pages.map((p, i) =>
-                  p === "ellipsis" ? (
-                    <PaginationItem key={`e${i}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        onClick={() => setItemPage(p as number)}
-                        isActive={p === itemPage}
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
+                {pages.map((p, i) => p === "ellipsis"
+                  ? <PaginationItem key={i}><PaginationEllipsis /></PaginationItem>
+                  : <PaginationItem key={p}><PaginationLink onClick={() => setPage(p as number)} isActive={p === page}>{p}</PaginationLink></PaginationItem>
                 )}
                 <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setItemPage(itemPage + 1)}
-                    aria-disabled={itemPage === totalPages}
-                    tabIndex={itemPage === totalPages ? -1 : undefined}
-                    className={itemPage === totalPages ? "pointer-events-none opacity-50" : undefined}
-                  />
+                  <PaginationNext onClick={() => setPage(page + 1)} aria-disabled={page === totalPages} />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
@@ -188,4 +169,13 @@ export default function FeedDetail() {
     </>
   )
 }
+
+function Loader() {
+  return (
+    <div className="flex items-center justify-center min-h-[300px]">
+      <Spinner />
+    </div>
+  )
+}
+
 

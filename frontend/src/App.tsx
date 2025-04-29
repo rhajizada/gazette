@@ -26,7 +26,7 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route path="/feed/:feedID" element={
+      <Route path="/feeds/:feedID" element={
         <RequireAuth>
           <FeedDetail />
         </RequireAuth>
