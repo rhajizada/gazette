@@ -52,9 +52,10 @@ export function ItemPreview({ item }: ItemPreviewProps) {
             {item.title}
           </h3>
           {item.description && (
-            <p className="text-gray-700 line-clamp-3 mt-1 break-words">
-              {item.description}
-            </p>
+            <div
+              className="leading-7 [&:not(:first-child)]:mt-6"
+              dangerouslySetInnerHTML={{ __html: item.description }}
+            />
           )}
           {item.authors && item.authors.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
