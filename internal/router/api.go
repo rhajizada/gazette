@@ -27,5 +27,6 @@ func RegisterAPI(h *handler.Handler) *http.ServeMux {
 	router.HandleFunc("GET /collections/{collectionID}/items", h.ListItemsByCollectionID)
 	router.HandleFunc("POST /collections/{collectionID}/item/{itemID}", h.AddItemToCollection)
 	router.HandleFunc("DELETE /collections/{collectionID}/item/{itemID}", h.RemoveItemFromCollection)
+	router.HandleFunc("GET /user", h.GetUser)
 	return router
 }

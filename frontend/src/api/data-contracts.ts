@@ -108,6 +108,15 @@ export interface GithubComRhajizadaGazetteInternalServiceSubscibeToFeedResponse 
   subscribed_at?: string;
 }
 
+export interface GithubComRhajizadaGazetteInternalServiceUser {
+  createdAt?: string;
+  email?: string;
+  id?: string;
+  lastUpdatedAt?: string;
+  name?: string;
+  sub?: string;
+}
+
 export interface InternalHandlerCreateCollectionRequest {
   name?: string;
 }

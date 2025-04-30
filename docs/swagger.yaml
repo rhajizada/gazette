@@ -177,6 +177,21 @@ definitions:
       subscribed_at:
         type: string
     type: object
+  github_com_rhajizada_gazette_internal_service.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      lastUpdatedAt:
+        type: string
+      name:
+        type: string
+      sub:
+        type: string
+    type: object
   internal_handler.CreateCollectionRequest:
     properties:
       name:
@@ -740,6 +755,31 @@ paths:
       summary: Like item
       tags:
       - Items
+  /api/user:
+    get:
+      description: Retrieves currently logged in user.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.User'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user
+      tags:
+      - Users
 securityDefinitions:
   BearerAuth:
     in: header

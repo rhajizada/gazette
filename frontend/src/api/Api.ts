@@ -21,6 +21,7 @@ import {
   GithubComRhajizadaGazetteInternalServiceListFeedsResponse,
   GithubComRhajizadaGazetteInternalServiceListItemsResponse,
   GithubComRhajizadaGazetteInternalServiceSubscibeToFeedResponse,
+  GithubComRhajizadaGazetteInternalServiceUser,
   InternalHandlerCreateCollectionRequest,
   InternalHandlerCreateFeedRequest,
 } from "./data-contracts";
@@ -63,7 +64,7 @@ export class Api<
    * @tags Collections
    * @name CollectionsCreate
    * @summary Create collection
-   * @request POST:/api/collections/
+   * @request POST:/api/collections
    * @secure
    */
   collectionsCreate = (
@@ -71,7 +72,7 @@ export class Api<
     params: RequestParams = {},
   ) =>
     this.request<GithubComRhajizadaGazetteInternalServiceCollection, string>({
-      path: `/api/collections/`,
+      path: `/api/collections`,
       method: "POST",
       body: body,
       secure: true,
@@ -405,6 +406,22 @@ export class Api<
     this.request<void, string>({
       path: `/api/items/${itemId}/like`,
       method: "DELETE",
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves currently logged in user.
+   *
+   * @tags Users
+   * @name UserList
+   * @summary Get user
+   * @request GET:/api/user
+   * @secure
+   */
+  userList = (params: RequestParams = {}) =>
+    this.request<GithubComRhajizadaGazetteInternalServiceUser, string>({
+      path: `/api/user`,
+      method: "GET",
       secure: true,
       ...params,
     });
