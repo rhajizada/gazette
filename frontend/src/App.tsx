@@ -1,12 +1,12 @@
-import { Routes, Route } from "react-router-dom";
-import Feeds from "./pages/Feeds";
-import Login from "./pages/Login";
+import { Routes, Route } from "react-router-dom"
+import Feeds from "./pages/Feeds"
+import Login from "./pages/Login"
 import User from "./pages/User.tsx"
-import NotFound from "./pages/NotFound";
-import FeedDetail from "./pages/FeedDetail";
-import ItemDetail from "./pages/ItemDetail";
-import CallbackPage from "./pages/Callback";
-import RequireAuth from "./components/RequireAuth";
+import NotFound from "./pages/NotFound"
+import FeedDetail from "./pages/FeedDetail"
+import ItemDetail from "./pages/ItemDetail"
+import CallbackPage from "./pages/Callback"
+import RequireAuth from "./components/RequireAuth"
 
 export default function App() {
   return (

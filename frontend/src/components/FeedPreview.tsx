@@ -47,7 +47,6 @@ export function FeedPreview({ feed }: FeedProps) {
       className="group flex flex-col h-full overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer"
     >
       <CardContent className="flex-1 relative pt-4 px-4 pb-2">
-        {/* Floating thumbnail */}
         {feed.image?.url && (
           <img
             src={feed.image.url}
@@ -57,20 +56,17 @@ export function FeedPreview({ feed }: FeedProps) {
           />
         )}
 
-        {/* Title */}
         <h3 className="text-lg font-bold text-gray-900 hover:text-primary transition-colors">
           {feed.title}
         </h3>
 
-        {/* Description wraps around image */}
         {feed.description && (
           <p className="text-gray-700 leading-relaxed mt-2">
             {feed.description}
           </p>
         )}
 
-        {/* Meta */}
-        <div className="flex flex-wrap gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4 clear-left">
           {feed.categories?.slice(0, 3).map((cat, _) => (
             <Badge>
               {cat}
@@ -87,8 +83,8 @@ export function FeedPreview({ feed }: FeedProps) {
             <strong>Language:</strong> {feed.language}
           </p>
         )}
-        <p className="text-xs text-gray-400 mt-1">
-          Last updated: {feed.updated_parsed && new Date(feed.updated_parsed).toLocaleDateString()}
+        <p className="text-sm text-gray-500 mt-1">
+          <strong>Last updated:</strong> {feed.updated_parsed && new Date(feed.updated_parsed).toLocaleDateString()}
         </p>
       </CardContent>
 

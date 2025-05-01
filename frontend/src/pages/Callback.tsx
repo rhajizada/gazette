@@ -1,22 +1,22 @@
-import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useEffect } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
 export default function CallbackPage() {
-  const { login } = useAuth();
-  const loc = useLocation();
-  const nav = useNavigate();
+  const { login } = useAuth()
+  const loc = useLocation()
+  const nav = useNavigate()
 
   useEffect(() => {
-    const params = new URLSearchParams(loc.search);
-    const token = params.get("token");
+    const params = new URLSearchParams(loc.search)
+    const token = params.get("token")
     if (token) {
-      login(token);
-      nav("/feeds", { replace: true });
+      login(token)
+      nav("/feeds", { replace: true })
     } else {
-      nav("/login", { replace: true });
+      nav("/login", { replace: true })
     }
-  }, [loc.search, login, nav]);
+  }, [loc.search, login, nav])
 
-  return <p>Signing you in…</p>;
+  return <p>Signing you in…</p>
 }

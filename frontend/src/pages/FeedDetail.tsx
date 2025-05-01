@@ -15,17 +15,17 @@ import { Spinner } from "@/components/ui/spinner"
 import { Star } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Navigate, useParams } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
-
+import { toast } from "sonner"
 import type {
   GithubComRhajizadaGazetteInternalServiceFeed as FeedType,
   GithubComRhajizadaGazetteInternalServiceItem as ItemModel,
 } from "../api/data-contracts"
+import { useAuth } from "../context/AuthContext"
 
 export default function FeedDetail() {
   const { feedID } = useParams<{ feedID: string }>()
   const { api, logout } = useAuth()
-  const PAGE_SIZE = 24
+  const PAGE_SIZE = 10
 
   const [feed, setFeed] = useState<FeedType | null>(null)
   const [items, setItems] = useState<ItemModel[]>([])
@@ -33,6 +33,7 @@ export default function FeedDetail() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [itemsLoading, setItemsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
   const [subLoading, setSubLoading] = useState(false)
@@ -48,9 +49,13 @@ export default function FeedDetail() {
         setSubscribed(res.data.subscribed ?? false)
       })
       .catch((err) => {
-        if (err.status === 404 || err.error === "Not Found") setNotFound(true)
-        else if (err.error === "Unauthorized") logout()
-        else console.error(err)
+        if (err.status === 404 || err.status === 400) {
+          setNotFound(true)
+        } else {
+          toast.error("Failed to load feed")
+          setError("Failed to load feed")
+          if (err.error === "Unauthorized") logout()
+        }
       })
       .finally(() => setLoading(false))
   }, [api, feedID, logout])
@@ -99,7 +104,13 @@ export default function FeedDetail() {
   }
 
   if (loading) return <Loader />
-  if (notFound || !feed) return <Navigate to="*" replace />
+  if (notFound || !feed) return <Navigate to="/*" />
+  if (error || !feed) return (
+    <>
+      <Navbar />
+      <div className="h-2 ju text-red-600">{error || "Feed not available"}</div>
+    </>
+  )
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const pages: (number | "ellipsis")[] = []

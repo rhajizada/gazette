@@ -375,6 +375,35 @@ export class Api<
       ...params,
     });
   /**
+   * @description Retrieves list of collections that given item is in.
+   *
+   * @tags Items
+   * @name ItemsCollectionsList
+   * @summary Get collections item is in.
+   * @request GET:/api/items/{itemID}/collections
+   * @secure
+   */
+  itemsCollectionsList = (
+    itemId: string,
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListCollectionsResponse,
+      string
+    >({
+      path: `/api/items/${itemId}/collections`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
    * @description Creates a like record for the current user on an item.
    *
    * @tags Items

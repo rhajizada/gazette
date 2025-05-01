@@ -170,3 +170,47 @@ func (s *Service) UnlikeItem(ctx context.Context, r repository.DeleteUserLikePar
 	}
 	return nil
 }
+
+// ListItemCollections returns list of collections that item is in.
+func (s *Service) ListItemCollections(ctx context.Context, r repository.ListCollectionsByItemIDParams) (*ListCollectionsResponse, error) {
+	total, err := s.Repo.CountCollectionsByItemID(ctx, repository.CountCollectionsByItemIDParams{
+		ItemID: r.ItemID,
+		UserID: r.UserID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed counting item collections: %w", err)
+	}
+
+	var rows []repository.Collection
+
+	if total == 0 {
+		rows = make([]repository.Collection, 0)
+	} else {
+		rows, err = s.Repo.ListCollectionsByItemID(ctx, repository.ListCollectionsByItemIDParams{
+			ItemID: r.ItemID,
+			UserID: r.UserID,
+			Limit:  r.Limit,
+			Offset: r.Offset,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed listing item collections: %w", err)
+		}
+	}
+
+	collections := make([]Collection, len(rows))
+	for i, row := range rows {
+		collections[i] = Collection{
+			ID:          row.ID,
+			Name:        row.Name,
+			CreatedAt:   row.CreatedAt,
+			LastUpdated: row.LastUpdated,
+		}
+	}
+
+	return &ListCollectionsResponse{
+		Limit:       r.Limit,
+		Offset:      r.Offset,
+		TotalCount:  total,
+		Collections: collections,
+	}, nil
+}

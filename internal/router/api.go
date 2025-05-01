@@ -20,6 +20,7 @@ func RegisterAPI(h *handler.Handler) *http.ServeMux {
 	router.HandleFunc("GET /items/{itemID}", h.GetItemByID)
 	router.HandleFunc("POST /items/{itemID}/like", h.LikeItem)
 	router.HandleFunc("DELETE /items/{itemID}/like", h.UnlikeItem)
+	router.HandleFunc("GET /items/{itemID}/collections", h.ListItemCollections)
 	router.HandleFunc("GET /collections", h.ListCollections)
 	router.HandleFunc("POST /collections", h.CreateCollection)
 	router.HandleFunc("GET /collections/{collectionID}", h.GetCollectionByID)

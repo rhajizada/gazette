@@ -40,7 +40,7 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 			Offset: params.Offset,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed listing liked items: %v", err), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "item not found", http.StatusNotFound)
 		} else {
-			http.Error(w, fmt.Sprintf("failed fetching item: %v", err), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -106,7 +106,7 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 			ItemID: itemID,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to like item: %v", err), http.StatusConflict)
+		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
 
@@ -137,9 +137,51 @@ func (h *Handler) UnlikeItem(w http.ResponseWriter, r *http.Request) {
 			UserID: userID,
 			ItemID: itemID,
 		}); err != nil {
-		http.Error(w, fmt.Sprintf("failed to unlike item: %v", err), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListItemCollections returns list of collections that item is in.
+// @Summary      Get collections item is in.
+// @Description  Retrieves list of collections that given item is in.
+// @Tags         Items
+// @Param        itemID  path      string  true  "Item UUID"
+// @Param        limit   query     int32  true   "Max number of items"
+// @Param        offset  query     int32  true   "Number of items to skip"
+// @Success      200     {object}  service.ListCollectionsResponse
+// @Failure      400     {object}  string
+// @Failure      500     {object}  string
+// @Security     BearerAuth
+// @Router       /api/items/{itemID}/collections [get]
+func (h *Handler) ListItemCollections(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserClaims(r).UserID
+	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	if err != nil {
+		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		return
+	}
+
+	params, err := getPageParams(r.URL.Query())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.Service.ListItemCollections(r.Context(),
+		repository.ListCollectionsByItemIDParams{
+			UserID: userID,
+			ItemID: itemID,
+			Limit:  params.Limit,
+			Offset: params.Offset,
+		})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }

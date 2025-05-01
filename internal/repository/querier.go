@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AddItemToCollection(ctx context.Context, arg AddItemToCollectionParams) (CollectionItem, error)
+	CountCollectionsByItemID(ctx context.Context, arg CountCollectionsByItemIDParams) (int64, error)
 	CountCollectionsByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountFeeds(ctx context.Context) (int64, error)
 	CountFeedsByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -52,6 +53,7 @@ type Querier interface {
 	GetUserFeedByID(ctx context.Context, arg GetUserFeedByIDParams) (GetUserFeedByIDRow, error)
 	GetUserFeedSubscription(ctx context.Context, arg GetUserFeedSubscriptionParams) (UserFeed, error)
 	GetUserLike(ctx context.Context, arg GetUserLikeParams) (UserLike, error)
+	ListCollectionsByItemID(ctx context.Context, arg ListCollectionsByItemIDParams) ([]Collection, error)
 	ListCollectionsByUser(ctx context.Context, arg ListCollectionsByUserParams) ([]Collection, error)
 	ListFeeds(ctx context.Context, arg ListFeedsParams) ([]Feed, error)
 	ListFeedsByUserID(ctx context.Context, arg ListFeedsByUserIDParams) ([]ListFeedsByUserIDRow, error)
