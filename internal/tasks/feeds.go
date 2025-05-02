@@ -55,7 +55,7 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 	for _, itm := range itemsToSync {
 		content := &itm.Content
 		description := &itm.Description
-		if itm.Description > itm.Content {
+		if len(itm.Description) > len(itm.Content) {
 			content = &itm.Description
 			description = &itm.Content
 		}
