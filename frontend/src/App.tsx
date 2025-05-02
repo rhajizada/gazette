@@ -3,10 +3,12 @@ import Feeds from "./pages/Feeds"
 import Login from "./pages/Login"
 import User from "./pages/User.tsx"
 import NotFound from "./pages/NotFound"
-import FeedDetail from "./pages/FeedDetail"
-import ItemDetail from "./pages/ItemDetail"
+import FeedDetails from "./pages/FeedDetails.tsx"
+import ItemDetails from "./pages/ItemDetails.tsx"
+import CollectionDetails from "./pages/CollectionDetails.tsx"
 import CallbackPage from "./pages/Callback"
 import RequireAuth from "./components/RequireAuth"
+import Collections from "./pages/Collections.tsx"
 
 export default function App() {
   return (
@@ -27,14 +29,27 @@ export default function App() {
           </RequireAuth>
         }
       />
+      <Route
+        path="/collections"
+        element={
+          <RequireAuth>
+            <Collections />
+          </RequireAuth>
+        }
+      />
       <Route path="/feeds/:feedID" element={
         <RequireAuth>
-          <FeedDetail />
+          <FeedDetails />
         </RequireAuth>
       } />
       <Route path="/items/:itemID" element={
         <RequireAuth>
-          <ItemDetail />
+          <ItemDetails />
+        </RequireAuth>
+      } />
+      <Route path="/collections/:collectionID" element={
+        <RequireAuth>
+          <CollectionDetails />
         </RequireAuth>
       } />
       <Route

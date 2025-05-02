@@ -23,7 +23,7 @@ import type {
 } from "../api/data-contracts"
 import { useAuth } from "../context/AuthContext"
 
-export default function ItemDetail() {
+export default function ItemDetails() {
   const { itemID } = useParams<{ itemID: string }>()
   const { api, logout } = useAuth()
 
