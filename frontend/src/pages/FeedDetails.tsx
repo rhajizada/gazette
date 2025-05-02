@@ -103,100 +103,105 @@ export default function FeedDetails() {
     }
   }
 
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const pages: (number | "ellipsis")[] = []
+
   if (loading) return <Loader />
   if (notFound || !feed) return <Navigate to="/*" />
   if (error || !feed) return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      <div className="h-2 ju text-red-600">{error || "Feed not available"}</div>
-    </>
-  )
-
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-  const pages: (number | "ellipsis")[] = []
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i)
-  } else if (page <= 4) pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages)
-  else if (page > totalPages - 4)
-    pages.push(
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages
-    )
-  else pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages)
-
-  return (
-    <>
-      <Navbar />
-
-      <div className="mx-auto max-w-4xl px-6 py-8">
-        <h1 className="text-4xl font-bold text-black">{feed.title}</h1>
-        {feed.description && (
-          <p className="text-lg text-gray-700 mt-2">{feed.description}</p>
-        )}
-        {feed.updated_parsed && (
-          <p className="text-sm text-gray-500 mt-1">Last updated: {new Date(feed.updated_parsed).toLocaleDateString()}</p>
-        )}
-        <br />
-        <Button
-          size="sm"
-          onClick={toggleSub}
-          disabled={subLoading}
-          className="inline-flex items-center bg-white text-gray-800 px-3 py-1 shadow hover:bg-gray-100 transition disabled:opacity-50"
-        >
-          <Star
-            fill={subscribed ? "currentColor" : "none"}
-            className={`w-5 h-5 mr-2 ${subscribed ? "text-yellow-400" : "text-gray-800"
-              }`}
-          />
-          {subscribed ? "Unsubscribe" : "Subscribe"}
-        </Button>
-      </div>
-      <div className="mx-auto max-w-5xl px-6">
-        {itemsLoading ? (
-          <Loader />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {items.map((item) => (
-              <ItemPreview key={item.id} item={item} />
-            ))}
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="mt-8 flex justify-center">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious onClick={() => setPage(page - 1)} aria-disabled={page === 1} />
-                </PaginationItem>
-                {pages.map((p, i) =>
-                  p === "ellipsis" ? (
-                    <PaginationItem key={i}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={p}>
-                      <PaginationLink onClick={() => setPage(p as number)} isActive={p === page}>
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                )}
-                <PaginationItem>
-                  <PaginationNext onClick={() => setPage(page + 1)} aria-disabled={page === totalPages} />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
+      <div className="flex-grow flex items-center justify-center">
+        <p className="text-red-600">{error || "Feed not available"}</p>
       </div>
       <Footer />
-    </>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+
+      {/* main content grows to fill */}
+      <main className="flex-grow mx-auto max-w-5xl px-6 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold text-black">{feed.title}</h1>
+          {feed.description && (
+            <p className="text-lg text-gray-700 mt-2">{feed.description}</p>
+          )}
+          {feed.updated_parsed && (
+            <p className="text-sm text-gray-500 mt-1">
+              Last updated: {new Date(feed.updated_parsed).toLocaleDateString()}
+            </p>
+          )}
+          <div className="mt-4">
+            <Button
+              size="sm"
+              onClick={toggleSub}
+              disabled={subLoading}
+              className="inline-flex items-center bg-white text-gray-800 px-3 py-1 shadow hover:bg-gray-100 transition disabled:opacity-50"
+            >
+              <Star
+                fill={subscribed ? "currentColor" : "none"}
+                className={`w-5 h-5 mr-2 ${subscribed ? "text-yellow-400" : "text-gray-800"}`}
+              />
+              {subscribed ? "Unsubscribe" : "Subscribe"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          {itemsLoading ? (
+            <Loader />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {items.map((item) => (
+                <ItemPreview key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setPage(page - 1)}
+                      aria-disabled={page === 1}
+                    />
+                  </PaginationItem>
+                  {pages.map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={i}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          onClick={() => setPage(p as number)}
+                          isActive={p === page}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setPage(page + 1)}
+                      aria-disabled={page === totalPages}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <Footer />
+    </div>
   )
 }
 
@@ -207,4 +212,3 @@ function Loader() {
     </div>
   )
 }
-

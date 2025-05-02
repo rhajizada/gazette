@@ -53,11 +53,18 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 	log.Printf("task %s - %d items to sync", t.ResultWriter().TaskID(), len(itemsToSync))
 
 	for _, itm := range itemsToSync {
+		content := &itm.Content
+		description := &itm.Description
+		if itm.Description > itm.Content {
+			content = &itm.Description
+			description = &itm.Content
+		}
+
 		r, err := h.Repo.CreateItem(ctx, repository.CreateItemParams{
 			FeedID:          feedID,
 			Title:           &itm.Title,
-			Description:     &itm.Description,
-			Content:         &itm.Content,
+			Description:     description,
+			Content:         content,
 			Link:            itm.Link,
 			Links:           itm.Links,
 			PublishedParsed: itm.PublishedParsed,

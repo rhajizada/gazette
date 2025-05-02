@@ -2,10 +2,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Star } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts"
 import { useAuth } from "../context/AuthContext"
+
+const MIN_WIDTH = 100
+const MIN_HEIGHT = 100
 
 interface FeedProps {
   feed: FeedType
@@ -16,6 +19,19 @@ export function FeedPreview({ feed }: FeedProps) {
   const { api, logout } = useAuth()
   const [subscribed, setSubscribed] = useState(feed.subscribed ?? false)
   const [loading, setLoading] = useState(false)
+  const [showImage, setShowImage] = useState(false)
+
+  useEffect(() => {
+    if (!feed?.image?.url) return
+    const img = new Image()
+    img.src = feed.image.url
+    img.onload = () => {
+      if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
+        setShowImage(true)
+      }
+    }
+  }, [feed?.image?.url])
+
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -47,14 +63,22 @@ export function FeedPreview({ feed }: FeedProps) {
       className="group flex flex-col h-full overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer"
     >
       <CardContent className="flex-1 relative pt-4 px-4 pb-2">
-        {feed.image?.url && (
-          <img
-            src={feed.image.url}
-            alt={feed.image.title ?? feed.title}
-            className="float-left w-24 h-24 object-cover rounded-lg mr-4 mb-4"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-          />
-        )}
+        <>
+          {showImage && (
+            <img
+              src={feed.image.url}
+              alt={feed.image.title ?? feed.title}
+              className="
+            float-left
+            mr-6
+            mb-6
+            rounded-lg
+            max-w-[33.333%]
+            h-auto
+          "
+            />
+          )}
+        </>
 
         <h3 className="text-lg font-bold text-gray-900 hover:text-primary transition-colors">
           {feed.title}

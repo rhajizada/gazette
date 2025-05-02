@@ -1,10 +1,13 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Heart } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts"
 import { useAuth } from "../context/AuthContext"
+
+const MIN_WIDTH = 100
+const MIN_HEIGHT = 100
 
 interface ItemPreviewProps {
   item: ItemModel
@@ -15,6 +18,7 @@ export function ItemPreview({ item }: ItemPreviewProps) {
   const navigate = useNavigate()
   const [liked, setLiked] = useState<boolean>(item.liked ?? false)
   const [loading, setLoading] = useState<boolean>(false)
+  const [showImage, setShowImage] = useState(false)
 
   const toggleLike = async () => {
     if (loading) return
@@ -35,29 +39,61 @@ export function ItemPreview({ item }: ItemPreviewProps) {
     }
   }
 
+  useEffect(() => {
+    if (!item?.image?.url) return
+    const img = new Image()
+    img.src = item.image.url
+    img.onload = () => {
+      if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
+        setShowImage(true)
+      }
+    }
+  }, [item?.image?.url])
+
   return (
-    <Card className="group overflow-hidden rounded-2xl shadow hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-      <CardContent className="flex break-words">
-        {/* Thumbnail on left */}
-        {item.image?.url && (
+    <Card
+      className="
+       group
+       flex flex-col
+       h-full
+       overflow-hidden
+       rounded-2xl
+       shadow hover:shadow-lg
+       transition-shadow duration-300
+       cursor-pointer
+     "
+      onClick={() => navigate(`/items/${item.id}`)}
+    >
+      <CardContent className="flex items-start break-words flex-1">
+        {showImage && (
           <img
             src={item.image.url}
             alt={item.image.title ?? item.title}
-            className="w-24 h-24 object-cover rounded-lg mr-4 flex-shrink-0"
-            onClick={() => navigate(`/items/${item.id}`)}
+            className="
+          w-1/3
+          flex-shrink-0
+          rounded-lg
+          mr-6
+          h-auto
+          object-contain
+        "
           />
         )}
-        <div onClick={() => navigate(`/items/${item.id}`)} className="flex-1 break-words">
-          <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors">
+        <div className="flex-1 break-words">
+          <h3
+            className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors"
+          >
             {item.title}
           </h3>
+
           {item.description && (
             <div
               className="leading-7 [&:not(:first-child)]:mt-6"
               dangerouslySetInnerHTML={{ __html: item.description }}
             />
           )}
-          {item.authors && item.authors.length > 0 && (
+
+          {item.authors && item.authors?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {item.authors.map((a, i) => (
                 <span
@@ -72,7 +108,7 @@ export function ItemPreview({ item }: ItemPreviewProps) {
         </div>
       </CardContent>
 
-      <CardFooter className="px-4 py-2 flex items-center justify-between">
+      <CardFooter className="mt-auto px-4 py-2 flex items-center justify-between">
         <button
           onClick={toggleLike}
           disabled={loading}

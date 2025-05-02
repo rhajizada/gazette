@@ -23,6 +23,9 @@ import type {
 } from "../api/data-contracts"
 import { useAuth } from "../context/AuthContext"
 
+const MIN_WIDTH = 100
+const MIN_HEIGHT = 100
+
 export default function ItemDetails() {
   const { itemID } = useParams<{ itemID: string }>()
   const { api, logout } = useAuth()
@@ -35,11 +38,12 @@ export default function ItemDetails() {
   const [liked, setLiked] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
 
-  const [collections, setCollections] = useState<CollectionModel[]>([]);         // all collections
-  const [userCollections, setMyCollections] = useState<CollectionModel[]>([]);     // collections this item is in
+  const [collections, setCollections] = useState<CollectionModel[]>([])
+  const [userCollections, setMyCollections] = useState<CollectionModel[]>([])
   const [included, setIncluded] = useState<Record<string, boolean>>({})
   const [collectionsLoading, setCollectionsLoading] = useState(false)
 
+  const [showImage, setShowImage] = useState(false)
   const [open, setOpen] = useState(false)
 
   const getColor = (id: string) => {
@@ -51,6 +55,7 @@ export default function ItemDetails() {
     return `hsl(${hue}, 70%, 50%)`
   }
 
+  // fetch item detail
   useEffect(() => {
     if (!itemID) return
     setLoading(true)
@@ -61,8 +66,6 @@ export default function ItemDetails() {
         setLiked(res.data.liked ?? false)
       })
       .catch(err => {
-        console.dir(err);
-        console.log(err);
         if (err.status === 404 || err.status === 400) {
           setNotFound(true)
         } else {
@@ -74,6 +77,18 @@ export default function ItemDetails() {
       .finally(() => setLoading(false))
   }, [api, itemID, logout])
 
+  useEffect(() => {
+    if (!item?.image?.url) return
+    const img = new Image()
+    img.src = item.image.url
+    img.onload = () => {
+      if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
+        setShowImage(true)
+      }
+    }
+  }, [item?.image?.url])
+
+  // fetch collections logic
   const fetchCollections = useCallback(async () => {
     if (!itemID) return
     setCollectionsLoading(true)
@@ -156,7 +171,11 @@ export default function ItemDetails() {
         const added = collections.find(c => c.id === colId)
         if (added) setMyCollections(prev => [...prev, added])
       }
-      toast.success(included[colId] ? `Removed from collection ${colName}` : `Added to collection ${colName}`)
+      toast.success(
+        included[colId]
+          ? `Removed from collection ${colName}`
+          : `Added to collection ${colName}`
+      )
     } catch {
       toast.error("Error updating collection")
     }
@@ -164,27 +183,36 @@ export default function ItemDetails() {
 
   if (loading) {
     return (
-      <>
+      <div className="flex flex-col min-h-screen">
         <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex-grow flex items-center justify-center">
           <Spinner />
         </div>
-      </>
+        <Footer />
+      </div>
     )
   }
 
-  if (notFound) return <Navigate to="/*" />
-  if (error || !item) return (
-    <>
-      <Navbar />
-      <div className="p-6 text-red-600">{error || "Item not available"}</div>
-    </>
-  )
+  if (notFound) {
+    return <Navigate to="/*" />
+  }
+
+  if (error || !item) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-grow p-6 text-red-600">
+          {error || "Item not available"}
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      <div className="mx-auto max-w-5xl px-6 py-8 grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8">
+      <main className="flex-grow mx-auto max-w-5xl px-6 py-8 grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8">
         <div>
           <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
             {item.title}
@@ -197,30 +225,34 @@ export default function ItemDetails() {
             </div>
           )}
           <p className="leading-7 [&:not(:first-child)]:mt-6 text-sm text-gray-500">
-            Published: {item.published_parsed && new Date(item.published_parsed).toLocaleString()}
+            Published:{" "}
+            {item.published_parsed &&
+              new Date(item.published_parsed).toLocaleString()}
             <br />
-            Updated: {item.updated_parsed && new Date(item.updated_parsed).toLocaleString()}
+            Updated:{" "}
+            {item.updated_parsed &&
+              new Date(item.updated_parsed).toLocaleString()}
           </p>
           <br />
-
-          {item.image?.url && (
+          {showImage && (
             <img
               src={item.image.url}
-              alt={item.image.title || item.title}
-              className="float-left mr-6 mb-6 w-1/3 rounded-lg"
+              alt={item.image.title ?? item.title}
+              className="
+            float-left
+            mr-6
+            mb-6
+            rounded-lg
+            max-w-[33.333%]
+            h-auto
+          "
             />
           )}
           {item.content && (
             <div
-              className="mt-6 leading-7"
+              className="mt-6 leading-7 max-w-prose mx-auto"
               dangerouslySetInnerHTML={{ __html: item.content }}
             />
-          )}
-          {item.categories && item.categories.length > 0 && (
-            <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
-              <h2 className="mt-8 scroll-m-20 text-2xl font-semibold tracking-tight">Categories</h2>
-              <li>{item.categories.join(", ")}</li>
-            </ul>
           )}
           {item.link && (
             <div className="mt-6 border-l-2 pl-4 italic">
@@ -250,8 +282,20 @@ export default function ItemDetails() {
             </button>
           </div>
         </div>
-
         <aside>
+          {item.categories && item.categories.length > 0 && (
+            <div className="mt-8 clear-left">
+              <h2 className="text-3xl font-semibold">
+                Categories
+              </h2>
+              <br />
+              <div className="flex flex-wrap gap-2">
+                {item.categories.slice(0, 3).map(cat => (
+                  <Badge key={cat}>{cat}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
           {item.enclosures?.length > 0 && (
             <div className="mt-8">
               <h2 className="text-3xl font-semibold">Attachments</h2>
@@ -334,9 +378,9 @@ export default function ItemDetails() {
             ))}
           </div>
         </aside>
-      </div>
+      </main>
       <Footer />
-    </>
+    </div>
   )
 }
 
