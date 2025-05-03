@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
@@ -54,16 +55,23 @@ type LikeItemResponse struct {
 
 // ListUserLikedItems returns paginated items the user has liked, with liked timestamps.
 func (s *Service) ListUserLikedItems(ctx context.Context, r repository.ListUserLikedItemsParams) (*ListItemsResponse, error) {
-	// count total liked items
 	total, err := s.Repo.CountLikedItems(ctx, r.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("failed counting liked items: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	// fetch liked items
 	rows, err := s.Repo.ListUserLikedItems(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("failed listing liked items: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	// map to service Item
@@ -111,9 +119,9 @@ func (s *Service) GetItem(ctx context.Context, r GetItemRequest) (*Item, error) 
 	row, err := s.Repo.GetItemByID(ctx, r.ItemID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("item not found: %w", err)
+			return nil, ErrNotFound
 		}
-		return nil, fmt.Errorf("failed fetching item: %w", err)
+		return nil, Err
 	}
 
 	// determine like status
@@ -157,7 +165,11 @@ func (s *Service) GetItem(ctx context.Context, r GetItemRequest) (*Item, error) 
 func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParams) (*LikeItemResponse, error) {
 	like, err := s.Repo.CreateUserLike(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("failed to like item: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return nil, ErrAlreadyExists
+		}
+		return nil, Err
 	}
 	resp := LikeItemResponse{LikedAt: like.LikedAt}
 	return &resp, nil
@@ -166,7 +178,11 @@ func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParam
 // UnlikeItem removes a like from an item.
 func (s *Service) UnlikeItem(ctx context.Context, r repository.DeleteUserLikeParams) error {
 	if err := s.Repo.DeleteUserLike(ctx, r); err != nil {
-		return fmt.Errorf("failed to unlike item: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		} else {
+			return Err
+		}
 	}
 	return nil
 }
@@ -178,7 +194,11 @@ func (s *Service) ListItemCollections(ctx context.Context, r repository.ListColl
 		UserID: r.UserID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed counting item collections: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	var rows []repository.Collection
@@ -192,8 +212,10 @@ func (s *Service) ListItemCollections(ctx context.Context, r repository.ListColl
 			Limit:  r.Limit,
 			Offset: r.Offset,
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed listing item collections: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
 		}
 	}
 

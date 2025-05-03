@@ -50,6 +50,7 @@ export default function FeedDetails() {
 
   useEffect(() => {
     if (!feedID) return;
+
     setLoading(true);
     api
       .feedsDetail(feedID, { secure: true, format: "json" })
@@ -57,11 +58,12 @@ export default function FeedDetails() {
         setFeed(res.data);
         setSubscribed(res.data.subscribed ?? false);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         if (err.status === 404 || err.status === 400) {
           setNotFound(true);
         } else {
-          toast.error("Failed to load feed");
+          const message = err.text();
+          toast.error(message || "failed to load feed");
           setError("Failed to load feed");
           if (err.error === "Unauthorized") logout();
         }

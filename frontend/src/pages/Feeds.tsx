@@ -62,7 +62,10 @@ export default function Feeds() {
       } catch (err: any) {
         console.error(err);
         if (err.error === "Unauthorized") logout();
-        else toast.error("Failed to load feeds");
+        else {
+          const message = await err.text();
+          toast.error(message || "failed to load feeds");
+        }
       } finally {
         setLoadingAll(false);
       }
@@ -101,9 +104,10 @@ export default function Feeds() {
       };
       await reload();
       setNewUrl("");
-      toast.success("Feed imported");
-    } catch {
-      toast.error("Failed to create feed");
+      toast.success("feed imported");
+    } catch (err: any) {
+      const message = await err.text();
+      toast.error(message || "failed to create feed");
     } finally {
       setCreating(false);
     }

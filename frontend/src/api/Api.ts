@@ -59,9 +59,8 @@ export class Api<
       ...params,
     });
   /**
-   * @description Creates a named collection for the current user.
+   * @description Creates a named collection for the current user.FeedURL@Tags         Collections
    *
-   * @tags Collections
    * @name CollectionsCreate
    * @summary Create collection
    * @request POST:/api/collections

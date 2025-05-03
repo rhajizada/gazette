@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
-	_ "github.com/rhajizada/gazette/internal/service"
+	"github.com/rhajizada/gazette/internal/service"
 
 	"github.com/rhajizada/gazette/internal/middleware"
 )
@@ -26,10 +24,10 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 	user, err := h.Service.GetUserByID(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, service.ErrNotFound) {
 			http.Error(w, "user not found", http.StatusNotFound)
 		} else {
-			http.Error(w, fmt.Sprintf("failed user item: %v", err), http.StatusInternalServerError)
+			http.Error(w, "failed fetching user", http.StatusInternalServerError)
 		}
 		return
 	}

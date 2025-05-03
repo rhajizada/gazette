@@ -2,7 +2,8 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,7 +23,11 @@ type User struct {
 func (s *Service) GetUserByID(ctx context.Context, userID uuid.UUID) (*User, error) {
 	user, err := s.Repo.GetUserByID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed fetching user: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	return &User{

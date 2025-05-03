@@ -54,8 +54,9 @@ export default function CollectionDetail() {
       .catch((err) => {
         if (err.status === 404) setNotFound(true);
         else {
-          toast.error("Failed to load collection");
-          setError("Failed to load collection");
+          const message = err.text();
+          toast.error(message || "failed to load collections");
+          setError("Failed to load collections");
           if (err.error === "Unauthorized") logout();
         }
       })

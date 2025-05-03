@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/mmcdole/gofeed"
 	"github.com/rhajizada/gazette/internal/repository"
 	"github.com/rhajizada/gazette/internal/tasks"
@@ -15,7 +17,6 @@ import (
 )
 
 // ListFeedsRequest wraps parameters for listing feeds.
-// Embeds the repository-defined params, including UserID, Column2 (subscribed flag), Limit, and Offset.
 type ListFeedsRequest struct {
 	UserID       uuid.UUID
 	SubscbedOnly bool
@@ -106,7 +107,7 @@ func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeeds
 		total, err = s.Repo.CountFeeds(ctx)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed counting feeds: %w", err)
+		return nil, err
 	}
 
 	// fetch
@@ -117,7 +118,11 @@ func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeeds
 		Limit:   r.Limit,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed listing feeds: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	feeds := make([]Feed, len(rows))
@@ -161,52 +166,51 @@ func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeeds
 
 // CreateFeed creates a feed if needed, enqueues a sync task, and subscribes the user.
 func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, error) {
-	// parse remote feed
 	parser := gofeed.NewParser()
 	remote, err := parser.ParseURL(r.FeedURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid feed URL: %w", err)
+		return nil, ErrNotFound
 	}
 
-	// lookup or create feed record
-	feed, err := s.Repo.GetFeedByFeedLink(ctx, remote.FeedLink)
+	feed, err := s.Repo.CreateFeed(ctx, repository.CreateFeedParams{
+		Title:           &remote.Title,
+		Description:     &remote.Description,
+		Link:            &remote.Link,
+		FeedLink:        remote.FeedLink,
+		Links:           remote.Links,
+		UpdatedParsed:   remote.UpdatedParsed,
+		PublishedParsed: remote.PublishedParsed,
+		Authors:         typeext.Authors(remote.Authors),
+		Language:        &remote.Language,
+		Image:           remote.Image,
+		Copyright:       &remote.Copyright,
+		Generator:       &remote.Generator,
+		Categories:      remote.Categories,
+		FeedType:        &remote.FeedType,
+		FeedVersion:     &remote.FeedVersion,
+	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			feed, err = s.Repo.CreateFeed(ctx, repository.CreateFeedParams{
-				Title:           &remote.Title,
-				Description:     &remote.Description,
-				Link:            &remote.Link,
-				FeedLink:        remote.FeedLink,
-				Links:           remote.Links,
-				UpdatedParsed:   remote.UpdatedParsed,
-				PublishedParsed: remote.PublishedParsed,
-				Authors:         typeext.Authors(remote.Authors),
-				Language:        &remote.Language,
-				Image:           remote.Image,
-				Copyright:       &remote.Copyright,
-				Generator:       &remote.Generator,
-				Categories:      remote.Categories,
-				FeedType:        &remote.FeedType,
-				FeedVersion:     &remote.FeedVersion,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed creating feed: %w", err)
-			}
-			// enqueue sync
-			task, _ := tasks.NewSyncFeedTask(feed.ID)
-			s.Client.Enqueue(task)
-		} else {
-			return nil, fmt.Errorf("lookup failed: %w", err)
+		log.Printf("%v", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			log.Printf("%v", pgErr)
+			return nil, ErrAlreadyExists
 		}
+		return nil, Err
 	}
 
-	// subscribe user
+	task, _ := tasks.NewSyncFeedTask(feed.ID)
+	s.Client.Enqueue(task)
+
 	sub, err := s.Repo.CreateUserFeedSubscription(ctx, repository.CreateUserFeedSubscriptionParams{UserID: r.UserID, FeedID: feed.ID})
 	if err != nil {
-		return nil, fmt.Errorf("failed subscribing: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return nil, ErrAlreadyExists
+		}
+		return nil, Err
 	}
 
-	// map authors
 	auths := make(Authors, len(feed.Authors))
 	for i, a := range feed.Authors {
 		auths[i] = Person{Name: a.Name, Email: a.Email}
@@ -240,7 +244,7 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 func (s *Service) GetFeed(ctx context.Context, r repository.GetUserFeedSubscriptionParams) (*Feed, error) {
 	feed, err := s.Repo.GetFeedByID(ctx, r.FeedID)
 	if err != nil {
-		return nil, fmt.Errorf("feed not found: %w", err)
+		return nil, err
 	}
 
 	// check subscription
@@ -279,8 +283,13 @@ func (s *Service) GetFeed(ctx context.Context, r repository.GetUserFeedSubscript
 
 // DeleteFeed deletes a feed entirely.
 func (s *Service) DeleteFeed(ctx context.Context, r DeleteFeedRequest) error {
-	if err := s.Repo.DeleteFeedByID(ctx, r.FeedID); err != nil {
-		return fmt.Errorf("failed deleting feed: %w", err)
+	err := s.Repo.DeleteFeedByID(ctx, r.FeedID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		} else {
+			return Err
+		}
 	}
 	return nil
 }
@@ -289,7 +298,11 @@ func (s *Service) DeleteFeed(ctx context.Context, r DeleteFeedRequest) error {
 func (s *Service) SubscribeToFeed(ctx context.Context, r repository.CreateUserFeedSubscriptionParams) (*SubscibeToFeedResponse, error) {
 	sub, err := s.Repo.CreateUserFeedSubscription(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("failed subscribing: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return nil, ErrAlreadyExists
+		}
+		return nil, Err
 	}
 	return &SubscibeToFeedResponse{
 		SubscribedAt: &sub.SubscribedAt,
@@ -298,33 +311,41 @@ func (s *Service) SubscribeToFeed(ctx context.Context, r repository.CreateUserFe
 
 // UnsubscribeFromFeed removes a user's subscription.
 func (s *Service) UnsubscribeFromFeed(ctx context.Context, r repository.DeleteUserFeedSubscriptionParams) error {
-	if err := s.Repo.DeleteUserFeedSubscription(ctx, r); err != nil {
-		return fmt.Errorf("failed unsubscribing: %w", err)
+	err := s.Repo.DeleteUserFeedSubscription(ctx, r)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		} else {
+			return Err
+		}
 	}
 	return nil
 }
 
 // ListItemsByFeedID returns paginated items from a feed, including per-user like status.
 func (s *Service) ListItemsByFeedID(ctx context.Context, r repository.ListItemsByFeedIDForUserParams) (*ListItemsResponse, error) {
-	// total count
 	total, err := s.Repo.CountItemsByFeedID(ctx, r.FeedID)
 	if err != nil {
-		return nil, fmt.Errorf("failed counting items for feed %s: %w", r.FeedID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
-	// fetch rows with like info
 	rows, err := s.Repo.ListItemsByFeedIDForUser(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("failed listing items for feed %s: %w", r.FeedID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
-	// map to service Item
 	items := make([]Item, len(rows))
 	for i, row := range rows {
-		// determine like status
 		liked := row.LikedAt != nil
 
-		// map authors
 		auths := make(Authors, len(row.Authors))
 		for j, a := range row.Authors {
 			auths[j] = Person{Name: a.Name, Email: a.Email}

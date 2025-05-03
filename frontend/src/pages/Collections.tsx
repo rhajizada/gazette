@@ -70,7 +70,10 @@ export default function Collections() {
       } catch (err: any) {
         console.error(err);
         if (err.error === "Unauthorized") logout();
-        else toast.error("Failed to load collections");
+        else {
+          const message = await err.text();
+          toast.error(message || "failed to load collections");
+        }
       } finally {
         setLoading(false);
       }
@@ -87,10 +90,10 @@ export default function Collections() {
       );
       setCollections((prev) => [...prev, res.data]);
       setNewName("");
-      toast.success("Collection created");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to create collection");
+      toast.success("collection created");
+    } catch (err: any) {
+      const message = await err.text();
+      toast.error(message || "failed to create collection");
     } finally {
       setCreating(false);
     }
@@ -100,10 +103,10 @@ export default function Collections() {
     try {
       await api.collectionsDelete(id, { secure: true });
       setCollections((prev) => prev.filter((c) => c.id !== id));
-      toast.success("Collection deleted");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete collection");
+      toast.success("collection deleted");
+    } catch (err: any) {
+      const message = await err.text();
+      toast.error(message || "failed to delete collection");
     }
   };
 

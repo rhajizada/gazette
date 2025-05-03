@@ -31,9 +31,9 @@ export function ItemPreview({ item }: ItemPreviewProps) {
         await api.itemsLikeCreate(item.id!, { format: "json" });
         setLiked(true);
       }
-    } catch (err) {
-      console.error("Failed to toggle like:", err);
-      toast.error("Could not update like status");
+    } catch (err: any) {
+      const message = await err.text();
+      toast.error(message || "failed to like item");
     } finally {
       setLoading(false);
     }

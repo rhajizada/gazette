@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
@@ -49,7 +51,11 @@ type AddItemToCollectionResponse struct {
 func (s *Service) ListCollections(ctx context.Context, r repository.ListCollectionsByUserParams) (*ListCollectionsResponse, error) {
 	total, err := s.Repo.CountCollectionsByUserID(ctx, r.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("failed counting collections: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	rows, err := s.Repo.ListCollectionsByUser(ctx, repository.ListCollectionsByUserParams{
@@ -57,8 +63,12 @@ func (s *Service) ListCollections(ctx context.Context, r repository.ListCollecti
 		Limit:  r.Limit,
 		Offset: r.Offset,
 	})
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed listing collections: %w", err)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	cols := make([]Collection, len(rows))
@@ -83,7 +93,11 @@ func (s *Service) ListCollections(ctx context.Context, r repository.ListCollecti
 func (s *Service) CreateCollection(ctx context.Context, r repository.CreateCollectionParams) (*Collection, error) {
 	col, err := s.Repo.CreateCollection(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating collection: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return nil, ErrAlreadyExists
+		}
+		return nil, Err
 	}
 	return &Collection{
 		ID:          col.ID,
@@ -97,7 +111,11 @@ func (s *Service) CreateCollection(ctx context.Context, r repository.CreateColle
 func (s *Service) GetCollection(ctx context.Context, collectionID uuid.UUID) (*Collection, error) {
 	col, err := s.Repo.GetCollectionByID(ctx, collectionID)
 	if err != nil {
-		return nil, fmt.Errorf("collection not found: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 	return &Collection{
 		ID:          col.ID,
@@ -110,7 +128,11 @@ func (s *Service) GetCollection(ctx context.Context, collectionID uuid.UUID) (*C
 // DeleteCollection deletes a collection by ID.
 func (s *Service) DeleteCollection(ctx context.Context, collectionID uuid.UUID) error {
 	if err := s.Repo.DeleteCollectionByID(ctx, collectionID); err != nil {
-		return fmt.Errorf("failed deleting collection: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		} else {
+			return Err
+		}
 	}
 	return nil
 }
@@ -119,7 +141,12 @@ func (s *Service) DeleteCollection(ctx context.Context, collectionID uuid.UUID) 
 func (s *Service) AddItemToCollection(ctx context.Context, r repository.AddItemToCollectionParams) (*AddItemToCollectionResponse, error) {
 	rec, err := s.Repo.AddItemToCollection(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("failed adding item to collection: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return nil, ErrBadInput
+		} else {
+			return nil, err
+		}
 	}
 	return &AddItemToCollectionResponse{
 		AddedAt: rec.AddedAt,
@@ -129,7 +156,11 @@ func (s *Service) AddItemToCollection(ctx context.Context, r repository.AddItemT
 // RemoveItemFromCollection removes an item from a collection.
 func (s *Service) RemoveItemFromCollection(ctx context.Context, r repository.RemoveItemFromCollectionParams) error {
 	if err := s.Repo.RemoveItemFromCollection(ctx, r); err != nil {
-		return fmt.Errorf("failed removing item from collection: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		} else {
+			return Err
+		}
 	}
 	return nil
 }
@@ -138,7 +169,11 @@ func (s *Service) RemoveItemFromCollection(ctx context.Context, r repository.Rem
 func (s *Service) ListCollectionItems(ctx context.Context, r ListCollectionItemsRequest) (*ListCollectionItemsResponse, error) {
 	total, err := s.Repo.CountItemsInCollection(ctx, r.CollectionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed counting items in collection: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	rows, err := s.Repo.ListItemsInCollection(ctx, repository.ListItemsInCollectionParams{
@@ -147,7 +182,11 @@ func (s *Service) ListCollectionItems(ctx context.Context, r ListCollectionItems
 		Offset:       r.Offset,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed listing items: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		} else {
+			return nil, Err
+		}
 	}
 
 	items := make([]Item, len(rows))

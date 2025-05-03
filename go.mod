@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hibiken/asynq v0.25.1
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/ollama/ollama v0.6.6

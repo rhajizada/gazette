@@ -66,10 +66,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a named collection for the current user.",
-                "tags": [
-                    "Collections"
-                ],
+                "description": "Creates a named collection for the current user.FeedURL@Tags         Collections",
                 "summary": "Create collection",
                 "parameters": [
                     {
@@ -91,6 +88,12 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "string"
                         }
@@ -178,6 +181,12 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "string"
                         }
@@ -626,12 +635,6 @@
                             "type": "string"
                         }
                     },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -865,12 +868,6 @@
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
                         "schema": {
                             "type": "string"
                         }

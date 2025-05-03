@@ -73,8 +73,10 @@ export default function ItemDetails() {
         if (err.status === 404 || err.status === 400) {
           setNotFound(true);
         } else {
-          toast.error("Failed to load item");
-          setError("Failed to load item");
+          const message = err.text();
+          toast.error(message || "failed to load item");
+          toast.error("failed to load item");
+          setError("failed to load item");
           if (err.error === "Unauthorized") logout();
         }
       })
@@ -132,9 +134,9 @@ export default function ItemDetails() {
         ...prev,
         ...Object.fromEntries(myCols.map((c) => [c.id!, true])),
       }));
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load collections");
+    } catch (err: any) {
+      const message = err.text();
+      toast.error(message || "failed to load collections");
     } finally {
       setCollectionsLoading(false);
     }
@@ -164,10 +166,11 @@ export default function ItemDetails() {
       }
       setLiked((prev) => !prev);
       toast.success(
-        liked ? "Removed from liked items" : "Added to liked items",
+        liked ? "removed from liked items" : "added to liked items",
       );
-    } catch {
-      toast.error("Could not update like status");
+    } catch (err: any) {
+      const message = await err.text();
+      toast.error(message || "failed to update item");
     } finally {
       setLikeLoading(false);
     }
@@ -187,11 +190,13 @@ export default function ItemDetails() {
       }
       toast.success(
         included[colId]
-          ? `Removed from collection ${colName}`
-          : `Added to collection ${colName}`,
+          ? `removed from collection ${colName}`
+          : `added to collection ${colName}`,
       );
-    } catch {
-      toast.error("Error updating collection");
+    } catch (err: any) {
+      const message = await err.text();
+      toast.error(message || "failed updating collection");
+      toast.error("failed updating collection");
     }
   };
 

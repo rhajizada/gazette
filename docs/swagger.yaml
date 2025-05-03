@@ -244,7 +244,7 @@ paths:
       tags:
       - Collections
     post:
-      description: Creates a named collection for the current user.
+      description: Creates a named collection for the current user.FeedURL@Tags         Collections
       parameters:
       - description: Collection name
         in: body
@@ -261,6 +261,10 @@ paths:
           description: Bad Request
           schema:
             type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
         "500":
           description: Internal Server Error
           schema:
@@ -268,8 +272,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Create collection
-      tags:
-      - Collections
   /api/collections/{collectionID}:
     delete:
       description: Deletes a collection by ID.
@@ -284,6 +286,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
           schema:
             type: string
         "500":
@@ -624,10 +630,6 @@ paths:
           description: Bad Request
           schema:
             type: string
-        "409":
-          description: Conflict
-          schema:
-            type: string
         "500":
           description: Internal Server Error
           schema:
@@ -777,10 +779,6 @@ paths:
             $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.LikeItemResponse'
         "400":
           description: Bad Request
-          schema:
-            type: string
-        "409":
-          description: Conflict
           schema:
             type: string
         "500":
