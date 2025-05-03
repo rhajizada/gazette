@@ -31,6 +31,9 @@ export function ItemPreview({ item }: ItemPreviewProps) {
         await api.itemsLikeCreate(item.id!, { format: "json" });
         setLiked(true);
       }
+      toast.success(
+        liked ? "removed from liked items" : "added to liked items",
+      );
     } catch (err: any) {
       const message = await err.text();
       toast.error(message || "failed to like item");
@@ -62,9 +65,11 @@ export function ItemPreview({ item }: ItemPreviewProps) {
        transition-shadow duration-300
        cursor-pointer
      "
-      onClick={() => navigate(`/items/${item.id}`)}
     >
-      <CardContent className="flex items-start break-words flex-1">
+      <CardContent
+        className="flex items-start break-words flex-1"
+        onClick={() => navigate(`/items/${item.id}`)}
+      >
         {showImage && (
           <img
             src={item.image.url}

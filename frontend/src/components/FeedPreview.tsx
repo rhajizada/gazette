@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Star } from "lucide-react";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts";
@@ -44,9 +45,15 @@ export function FeedPreview({ feed }: FeedProps) {
         await api.feedsSubscribeUpdate(feed.id, { format: "json" });
         setSubscribed(true);
       }
+      toast.success(
+        subscribed ? "unsubsribed from feed" : "subscribed to feed",
+      );
     } catch (err: any) {
       if (err.error === "Unauthorized") logout();
-      else console.error("Subscription error:", err);
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to subscribe to feed");
+      }
     } finally {
       setLoading(false);
     }
