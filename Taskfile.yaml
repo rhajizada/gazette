@@ -52,10 +52,6 @@ tasks:
         msg: "❌ Error: invalid app '{{.app}}', valid options are server, worker, or scheduler."
     cmds:
       - |
-        if [ -n "${DOCKER_REGISTRY_URL:-}" ]; then
-          echo "❌ Error: missing DOCKER_REGISTRY_URL environment variable." >&2
-          exit 1
-        fi
         docker tag {{.name}}-{{.app}} {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
         docker push {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
     dir: ./
