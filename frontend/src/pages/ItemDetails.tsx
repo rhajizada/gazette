@@ -1,7 +1,7 @@
-import { Footer } from "@/components/Footer"
-import { Navbar } from "@/components/Navbar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Footer } from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,177 +9,191 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Spinner } from "@/components/ui/spinner"
-import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, Heart as HeartIcon } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
-import { Link, Navigate, useParams } from "react-router-dom"
-import { toast } from "sonner"
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown, Heart as HeartIcon } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import type {
   GithubComRhajizadaGazetteInternalServiceCollection as CollectionModel,
   GithubComRhajizadaGazetteInternalServiceItem as ItemModel,
-} from "../api/data-contracts"
-import { useAuth } from "../context/AuthContext"
+} from "../api/data-contracts";
+import { useAuth } from "../context/AuthContext";
 
-const MIN_WIDTH = 100
-const MIN_HEIGHT = 100
+const MIN_WIDTH = 100;
+const MIN_HEIGHT = 100;
 
 export default function ItemDetails() {
-  const { itemID } = useParams<{ itemID: string }>()
-  const { api, logout } = useAuth()
+  const { itemID } = useParams<{ itemID: string }>();
+  const { api, logout } = useAuth();
 
-  const [item, setItem] = useState<ItemModel | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const [item, setItem] = useState<ItemModel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-  const [liked, setLiked] = useState(false)
-  const [likeLoading, setLikeLoading] = useState(false)
+  const [liked, setLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
 
-  const [collections, setCollections] = useState<CollectionModel[]>([])
-  const [userCollections, setMyCollections] = useState<CollectionModel[]>([])
-  const [included, setIncluded] = useState<Record<string, boolean>>({})
-  const [collectionsLoading, setCollectionsLoading] = useState(false)
+  const [collections, setCollections] = useState<CollectionModel[]>([]);
+  const [userCollections, setMyCollections] = useState<CollectionModel[]>([]);
+  const [included, setIncluded] = useState<Record<string, boolean>>({});
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
 
-  const [showImage, setShowImage] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [showImage, setShowImage] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const getColor = (id: string) => {
-    let hash = 0
+    let hash = 0;
     for (let i = 0; i < id.length; i++) {
-      hash = id.charCodeAt(i) + ((hash << 5) - hash)
+      hash = id.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const hue = Math.abs(hash) % 360
-    return `hsl(${hue}, 70%, 50%)`
-  }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 50%)`;
+  };
 
   // fetch item detail
   useEffect(() => {
-    if (!itemID) return
-    setLoading(true)
+    if (!itemID) return;
+    setLoading(true);
     api
       .itemsDetail(itemID, { secure: true, format: "json" })
-      .then(res => {
-        setItem(res.data)
-        setLiked(res.data.liked ?? false)
+      .then((res) => {
+        setItem(res.data);
+        setLiked(res.data.liked ?? false);
       })
-      .catch(err => {
+      .catch((err) => {
         if (err.status === 404 || err.status === 400) {
-          setNotFound(true)
+          setNotFound(true);
         } else {
-          toast.error("Failed to load item")
-          setError("Failed to load item")
-          if (err.error === "Unauthorized") logout()
+          toast.error("Failed to load item");
+          setError("Failed to load item");
+          if (err.error === "Unauthorized") logout();
         }
       })
-      .finally(() => setLoading(false))
-  }, [api, itemID, logout])
+      .finally(() => setLoading(false));
+  }, [api, itemID, logout]);
 
   useEffect(() => {
-    if (!item?.image?.url) return
-    const img = new Image()
-    img.src = item.image.url
+    if (!item?.image?.url) return;
+    const img = new Image();
+    img.src = item.image.url;
     img.onload = () => {
       if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
-        setShowImage(true)
+        setShowImage(true);
       }
-    }
-  }, [item?.image?.url])
+    };
+  }, [item?.image?.url]);
 
   // fetch collections logic
   const fetchCollections = useCallback(async () => {
-    if (!itemID) return
-    setCollectionsLoading(true)
+    if (!itemID) return;
+    setCollectionsLoading(true);
     try {
       const [allRes, firstMyRes] = await Promise.all([
-        api.collectionsList({ limit: 50, offset: 0 }, { secure: true, format: "json" }),
-        api.itemsCollectionsList(itemID, { limit: 50, offset: 0 }, { secure: true, format: "json" }),
-      ])
+        api.collectionsList(
+          { limit: 50, offset: 0 },
+          { secure: true, format: "json" },
+        ),
+        api.itemsCollectionsList(
+          itemID,
+          { limit: 50, offset: 0 },
+          { secure: true, format: "json" },
+        ),
+      ]);
 
-      const allCols = allRes.data.collections || []
-      setCollections(allCols)
+      const allCols = allRes.data.collections || [];
+      setCollections(allCols);
 
-      const perPage = 50
-      const total = firstMyRes.data.total_count ?? firstMyRes.data.collections?.length ?? 0
-      let myCols = firstMyRes.data.collections || []
+      const perPage = 50;
+      const total =
+        firstMyRes.data.total_count ?? firstMyRes.data.collections?.length ?? 0;
+      let myCols = firstMyRes.data.collections || [];
 
-      const pages = Math.ceil(total / perPage)
+      const pages = Math.ceil(total / perPage);
       for (let page = 1; page < pages; page++) {
         const pageRes = await api.itemsCollectionsList(
           itemID,
           { limit: perPage, offset: page * perPage },
-          { secure: true, format: "json" }
-        )
-        myCols = myCols.concat(pageRes.data.collections || [])
+          { secure: true, format: "json" },
+        );
+        myCols = myCols.concat(pageRes.data.collections || []);
       }
 
-      setMyCollections(myCols)
-      setIncluded(prev => ({
+      setMyCollections(myCols);
+      setIncluded((prev) => ({
         ...prev,
-        ...Object.fromEntries(myCols.map(c => [c.id!, true])),
-      }))
+        ...Object.fromEntries(myCols.map((c) => [c.id!, true])),
+      }));
     } catch (err) {
-      console.error(err)
-      toast.error("Failed to load collections")
+      console.error(err);
+      toast.error("Failed to load collections");
     } finally {
-      setCollectionsLoading(false)
+      setCollectionsLoading(false);
     }
-  }, [api, itemID])
+  }, [api, itemID]);
 
   useEffect(() => {
     if (item && !error && !notFound) {
-      fetchCollections()
+      fetchCollections();
     }
-  }, [item, error, notFound, fetchCollections])
+  }, [item, error, notFound, fetchCollections]);
 
   const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen)
+    setOpen(isOpen);
     if (isOpen && !collections.length && !collectionsLoading) {
-      fetchCollections()
+      fetchCollections();
     }
-  }
+  };
 
   const toggleLike = async () => {
-    if (!item || likeLoading) return
-    setLikeLoading(true)
+    if (!item || likeLoading) return;
+    setLikeLoading(true);
     try {
       if (liked) {
-        await api.itemsLikeDelete(item.id!, { secure: true, format: "json" })
+        await api.itemsLikeDelete(item.id!, { secure: true, format: "json" });
       } else {
-        await api.itemsLikeCreate(item.id!, { secure: true, format: "json" })
+        await api.itemsLikeCreate(item.id!, { secure: true, format: "json" });
       }
-      setLiked(prev => !prev)
-      toast.success(liked ? "Removed from liked items" : "Added to liked items")
+      setLiked((prev) => !prev);
+      toast.success(
+        liked ? "Removed from liked items" : "Added to liked items",
+      );
     } catch {
-      toast.error("Could not update like status")
+      toast.error("Could not update like status");
     } finally {
-      setLikeLoading(false)
+      setLikeLoading(false);
     }
-  }
+  };
 
   const toggleCollection = async (colId: string, colName: string) => {
     try {
       if (included[colId]) {
-        await api.collectionsItemDelete(colId, itemID!, { secure: true })
-        setIncluded(prev => ({ ...prev, [colId]: false }))
-        setMyCollections(prev => prev.filter(c => c.id !== colId))
+        await api.collectionsItemDelete(colId, itemID!, { secure: true });
+        setIncluded((prev) => ({ ...prev, [colId]: false }));
+        setMyCollections((prev) => prev.filter((c) => c.id !== colId));
       } else {
-        await api.collectionsItemCreate(colId, itemID!, { secure: true })
-        setIncluded(prev => ({ ...prev, [colId]: true }))
-        const added = collections.find(c => c.id === colId)
-        if (added) setMyCollections(prev => [...prev, added])
+        await api.collectionsItemCreate(colId, itemID!, { secure: true });
+        setIncluded((prev) => ({ ...prev, [colId]: true }));
+        const added = collections.find((c) => c.id === colId);
+        if (added) setMyCollections((prev) => [...prev, added]);
       }
       toast.success(
         included[colId]
           ? `Removed from collection ${colName}`
-          : `Added to collection ${colName}`
-      )
+          : `Added to collection ${colName}`,
+      );
     } catch {
-      toast.error("Error updating collection")
+      toast.error("Error updating collection");
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -190,11 +204,11 @@ export default function ItemDetails() {
         </div>
         <Footer />
       </div>
-    )
+    );
   }
 
   if (notFound) {
-    return <Navigate to="/*" />
+    return <Navigate to="/*" />;
   }
 
   if (error || !item) {
@@ -206,7 +220,7 @@ export default function ItemDetails() {
         </main>
         <Footer />
       </div>
-    )
+    );
   }
 
   return (
@@ -270,8 +284,10 @@ export default function ItemDetails() {
               aria-label={liked ? "Unlike" : "Like"}
               className={cn(
                 "p-2 rounded-full transition-colors",
-                liked ? "text-red-500 hover:bg-red-100" : "text-gray-500 hover:bg-gray-100",
-                likeLoading && "opacity-50 cursor-not-allowed"
+                liked
+                  ? "text-red-500 hover:bg-red-100"
+                  : "text-gray-500 hover:bg-gray-100",
+                likeLoading && "opacity-50 cursor-not-allowed",
               )}
             >
               <HeartIcon
@@ -285,12 +301,10 @@ export default function ItemDetails() {
         <aside>
           {item.categories && item.categories.length > 0 && (
             <div className="mt-8 clear-left">
-              <h2 className="text-3xl font-semibold">
-                Categories
-              </h2>
+              <h2 className="text-3xl font-semibold">Categories</h2>
               <br />
               <div className="flex flex-wrap gap-2">
-                {item.categories.slice(0, 3).map(cat => (
+                {item.categories.slice(0, 3).map((cat) => (
                   <Badge key={cat}>{cat}</Badge>
                 ))}
               </div>
@@ -315,7 +329,7 @@ export default function ItemDetails() {
                     >
                       Download ({enc.type || "file"})
                     </a>
-                  )
+                  ),
                 )}
               </div>
             </div>
@@ -344,7 +358,7 @@ export default function ItemDetails() {
                   <CommandList>
                     <CommandEmpty>No collections.</CommandEmpty>
                     <CommandGroup>
-                      {collections.map(c => (
+                      {collections.map((c) => (
                         <CommandItem
                           key={c.id}
                           value={c.id!}
@@ -353,7 +367,7 @@ export default function ItemDetails() {
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              included[c.id!] ? "opacity-100" : "opacity-0"
+                              included[c.id!] ? "opacity-100" : "opacity-0",
                             )}
                           />
                           {c.name}
@@ -367,7 +381,7 @@ export default function ItemDetails() {
           </Popover>
           <br />
           <div className="mt-4 flex flex-wrap gap-2">
-            {userCollections.map(c => (
+            {userCollections.map((c) => (
               <Badge
                 key={c.id}
                 variant="outline"
@@ -381,6 +395,5 @@ export default function ItemDetails() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
-

@@ -1,7 +1,7 @@
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Link } from "react-router-dom"
-import { Footer } from "@/components/Footer"
+import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 export default function Login() {
   return (
@@ -30,6 +30,5 @@ export default function Login() {
 
       <Footer />
     </div>
-  )
+  );
 }
-

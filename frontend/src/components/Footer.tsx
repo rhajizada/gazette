@@ -1,4 +1,4 @@
-import { Github } from 'lucide-react';
+import { Github } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Footer() {
@@ -20,5 +20,5 @@ export function Footer() {
         </a>
       </div>
     </footer>
-  )
+  );
 }

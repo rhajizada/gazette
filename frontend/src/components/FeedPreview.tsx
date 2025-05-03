@@ -1,61 +1,60 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Star } from "lucide-react"
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts"
-import { useAuth } from "../context/AuthContext"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts";
+import { useAuth } from "../context/AuthContext";
 
-const MIN_WIDTH = 100
-const MIN_HEIGHT = 100
+const MIN_WIDTH = 100;
+const MIN_HEIGHT = 100;
 
 interface FeedProps {
-  feed: FeedType
+  feed: FeedType;
 }
 
 export function FeedPreview({ feed }: FeedProps) {
-  const navigate = useNavigate()
-  const { api, logout } = useAuth()
-  const [subscribed, setSubscribed] = useState(feed.subscribed ?? false)
-  const [loading, setLoading] = useState(false)
-  const [showImage, setShowImage] = useState(false)
+  const navigate = useNavigate();
+  const { api, logout } = useAuth();
+  const [subscribed, setSubscribed] = useState(feed.subscribed ?? false);
+  const [loading, setLoading] = useState(false);
+  const [showImage, setShowImage] = useState(false);
 
   useEffect(() => {
-    if (!feed?.image?.url) return
-    const img = new Image()
-    img.src = feed.image.url
+    if (!feed?.image?.url) return;
+    const img = new Image();
+    img.src = feed.image.url;
     img.onload = () => {
       if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
-        setShowImage(true)
+        setShowImage(true);
       }
-    }
-  }, [feed?.image?.url])
-
+    };
+  }, [feed?.image?.url]);
 
   const handleToggle = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!feed.id) return
-    setLoading(true)
+    e.stopPropagation();
+    if (!feed.id) return;
+    setLoading(true);
     try {
       if (subscribed) {
-        await api.feedsSubscribeDelete(feed.id, { format: "json" })
-        setSubscribed(false)
+        await api.feedsSubscribeDelete(feed.id, { format: "json" });
+        setSubscribed(false);
       } else {
-        await api.feedsSubscribeUpdate(feed.id, { format: "json" })
-        setSubscribed(true)
+        await api.feedsSubscribeUpdate(feed.id, { format: "json" });
+        setSubscribed(true);
       }
     } catch (err: any) {
-      if (err.error === "Unauthorized") logout()
-      else console.error("Subscription error:", err)
+      if (err.error === "Unauthorized") logout();
+      else console.error("Subscription error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCardClick = () => {
-    if (feed.id) navigate(`/feeds/${feed.id}`)
-  }
+    if (feed.id) navigate(`/feeds/${feed.id}`);
+  };
 
   return (
     <Card
@@ -91,15 +90,12 @@ export function FeedPreview({ feed }: FeedProps) {
         )}
 
         <div className="flex flex-wrap gap-2 mt-4 clear-left">
-          {feed.categories?.slice(0, 3).map((cat, _) => (
-            <Badge>
-              {cat}
-            </Badge>
-          ))}
+          {feed.categories?.slice(0, 3).map((cat, _) => <Badge>{cat}</Badge>)}
         </div>
         {feed.authors && feed.authors.length > 0 && (
           <p className="text-sm text-gray-500 mt-2">
-            <strong>Author{feed.authors.length > 1 ? "s" : ""}:</strong> {feed.authors.map(a => a.name || a.email).join(", ")}
+            <strong>Author{feed.authors.length > 1 ? "s" : ""}:</strong>{" "}
+            {feed.authors.map((a) => a.name || a.email).join(", ")}
           </p>
         )}
         {feed.language && (
@@ -108,7 +104,9 @@ export function FeedPreview({ feed }: FeedProps) {
           </p>
         )}
         <p className="text-sm text-gray-500 mt-1">
-          <strong>Last updated:</strong> {feed.updated_parsed && new Date(feed.updated_parsed).toLocaleDateString()}
+          <strong>Last updated:</strong>{" "}
+          {feed.updated_parsed &&
+            new Date(feed.updated_parsed).toLocaleDateString()}
         </p>
       </CardContent>
 
@@ -121,13 +119,13 @@ export function FeedPreview({ feed }: FeedProps) {
         >
           <Star
             fill={subscribed ? "currentColor" : "none"}
-            className={`w-5 h-5 mr-2 ${subscribed ? "text-yellow-400" : "text-gray-800"
-              }`}
+            className={`w-5 h-5 mr-2 ${
+              subscribed ? "text-yellow-400" : "text-gray-800"
+            }`}
           />
           {subscribed ? "Unsubscribe" : "Subscribe"}
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
-

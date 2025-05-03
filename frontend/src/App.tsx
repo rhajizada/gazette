@@ -1,14 +1,14 @@
-import { Routes, Route } from "react-router-dom"
-import Feeds from "./pages/Feeds"
-import Login from "./pages/Login"
-import User from "./pages/User.tsx"
-import NotFound from "./pages/NotFound"
-import FeedDetails from "./pages/FeedDetails.tsx"
-import ItemDetails from "./pages/ItemDetails.tsx"
-import CollectionDetails from "./pages/CollectionDetails.tsx"
-import CallbackPage from "./pages/Callback"
-import RequireAuth from "./components/RequireAuth"
-import Collections from "./pages/Collections.tsx"
+import { Route, Routes } from "react-router-dom";
+import RequireAuth from "./components/RequireAuth";
+import CallbackPage from "./pages/Callback";
+import CollectionDetails from "./pages/CollectionDetails.tsx";
+import Collections from "./pages/Collections.tsx";
+import FeedDetails from "./pages/FeedDetails.tsx";
+import Feeds from "./pages/Feeds";
+import ItemDetails from "./pages/ItemDetails.tsx";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import User from "./pages/User.tsx";
 
 export default function App() {
   return (
@@ -37,21 +37,30 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route path="/feeds/:feedID" element={
-        <RequireAuth>
-          <FeedDetails />
-        </RequireAuth>
-      } />
-      <Route path="/items/:itemID" element={
-        <RequireAuth>
-          <ItemDetails />
-        </RequireAuth>
-      } />
-      <Route path="/collections/:collectionID" element={
-        <RequireAuth>
-          <CollectionDetails />
-        </RequireAuth>
-      } />
+      <Route
+        path="/feeds/:feedID"
+        element={
+          <RequireAuth>
+            <FeedDetails />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/items/:itemID"
+        element={
+          <RequireAuth>
+            <ItemDetails />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/collections/:collectionID"
+        element={
+          <RequireAuth>
+            <CollectionDetails />
+          </RequireAuth>
+        }
+      />
       <Route
         path="/user"
         element={
@@ -66,4 +75,3 @@ export default function App() {
     </Routes>
   );
 }
-

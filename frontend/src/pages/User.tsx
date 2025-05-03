@@ -1,34 +1,35 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
-import type { GithubComRhajizadaGazetteInternalServiceUser as UserModel } from "../api/data-contracts"
-import { Navbar } from "@/components/Navbar"
-import { Footer } from "@/components/Footer"
-import { Spinner } from "@/components/ui/spinner"
-import { Button } from "@/components/ui/button"
-import { User as UserIcon, LogOut as LogOutIcon } from "lucide-react"
+import { Footer } from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { LogOut as LogOutIcon, User as UserIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import type { GithubComRhajizadaGazetteInternalServiceUser as UserModel } from "../api/data-contracts";
+import { useAuth } from "../context/AuthContext";
 
 export default function UserPage() {
-  const { api, logout } = useAuth()
-  const navigate = useNavigate()
-  const [user, setUser] = useState<UserModel | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { api, logout } = useAuth();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<UserModel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true)
-    api.userList({ format: "json" })
+    setLoading(true);
+    api
+      .userList({ format: "json" })
       .then((res) => setUser(res.data))
       .catch((err) => {
-        console.error(err)
-        setError("Failed to load user data.")
+        console.error(err);
+        setError("Failed to load user data.");
         if (err.error === "Unauthorized") {
-          logout()
-          navigate("/login", { replace: true })
+          logout();
+          navigate("/login", { replace: true });
         }
       })
-      .finally(() => setLoading(false))
-  }, [api, logout, navigate])
+      .finally(() => setLoading(false));
+  }, [api, logout, navigate]);
 
   if (loading) {
     return (
@@ -39,17 +40,19 @@ export default function UserPage() {
         </div>
         <Footer />
       </div>
-    )
+    );
   }
 
   if (error || !user) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <div className="flex-1 p-6 text-red-600">{error || "User not found."}</div>
+        <div className="flex-1 p-6 text-red-600">
+          {error || "User not found."}
+        </div>
         <Footer />
       </div>
-    )
+    );
   }
 
   return (
@@ -76,10 +79,13 @@ export default function UserPage() {
               <span className="font-medium">User ID:</span> {user.id}
             </p>
             <p>
-              <span className="font-medium">Joined:</span> {user.createdAt && new Date(user.createdAt).toLocaleDateString()}
+              <span className="font-medium">Joined:</span>{" "}
+              {user.createdAt && new Date(user.createdAt).toLocaleDateString()}
             </p>
             <p>
-              <span className="font-medium">Last Updated:</span> {user.lastUpdatedAt && new Date(user.lastUpdatedAt).toLocaleDateString()}
+              <span className="font-medium">Last Updated:</span>{" "}
+              {user.lastUpdatedAt &&
+                new Date(user.lastUpdatedAt).toLocaleDateString()}
             </p>
           </div>
           <Button
@@ -94,6 +100,5 @@ export default function UserPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
-

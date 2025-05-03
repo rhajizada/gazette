@@ -1,54 +1,54 @@
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Heart } from "lucide-react"
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { toast } from "sonner"
-import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts"
-import { useAuth } from "../context/AuthContext"
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Heart } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts";
+import { useAuth } from "../context/AuthContext";
 
-const MIN_WIDTH = 100
-const MIN_HEIGHT = 100
+const MIN_WIDTH = 100;
+const MIN_HEIGHT = 100;
 
 interface ItemPreviewProps {
-  item: ItemModel
+  item: ItemModel;
 }
 
 export function ItemPreview({ item }: ItemPreviewProps) {
-  const { api } = useAuth()
-  const navigate = useNavigate()
-  const [liked, setLiked] = useState<boolean>(item.liked ?? false)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [showImage, setShowImage] = useState(false)
+  const { api } = useAuth();
+  const navigate = useNavigate();
+  const [liked, setLiked] = useState<boolean>(item.liked ?? false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showImage, setShowImage] = useState(false);
 
   const toggleLike = async () => {
-    if (loading) return
-    setLoading(true)
+    if (loading) return;
+    setLoading(true);
     try {
       if (liked) {
-        await api.itemsLikeDelete(item.id!, { format: "json" })
-        setLiked(false)
+        await api.itemsLikeDelete(item.id!, { format: "json" });
+        setLiked(false);
       } else {
-        await api.itemsLikeCreate(item.id!, { format: "json" })
-        setLiked(true)
+        await api.itemsLikeCreate(item.id!, { format: "json" });
+        setLiked(true);
       }
     } catch (err) {
-      console.error("Failed to toggle like:", err)
-      toast.error("Could not update like status")
+      console.error("Failed to toggle like:", err);
+      toast.error("Could not update like status");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (!item?.image?.url) return
-    const img = new Image()
-    img.src = item.image.url
+    if (!item?.image?.url) return;
+    const img = new Image();
+    img.src = item.image.url;
     img.onload = () => {
       if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
-        setShowImage(true)
+        setShowImage(true);
       }
-    }
-  }, [item?.image?.url])
+    };
+  }, [item?.image?.url]);
 
   return (
     <Card
@@ -80,9 +80,7 @@ export function ItemPreview({ item }: ItemPreviewProps) {
           />
         )}
         <div className="flex-1 break-words">
-          <h3
-            className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors"
-          >
+          <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors">
             {item.title}
           </h3>
 
@@ -113,8 +111,11 @@ export function ItemPreview({ item }: ItemPreviewProps) {
           onClick={toggleLike}
           disabled={loading}
           aria-label={liked ? "Unlike item" : "Like item"}
-          className={`p-2 rounded-full transition-colors ${liked ? "text-red-500 hover:bg-red-100" : "text-gray-500 hover:bg-gray-100"
-            } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`p-2 rounded-full transition-colors ${
+            liked
+              ? "text-red-500 hover:bg-red-100"
+              : "text-gray-500 hover:bg-gray-100"
+          } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <Heart
             fill={liked ? "currentColor" : "none"}
@@ -129,6 +130,5 @@ export function ItemPreview({ item }: ItemPreviewProps) {
         )}
       </CardFooter>
     </Card>
-  )
+  );
 }
-

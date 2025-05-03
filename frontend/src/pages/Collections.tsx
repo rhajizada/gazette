@@ -1,6 +1,16 @@
-import { useEffect, useState } from "react";
-import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,22 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import { Trash2, PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceCollection as CollectionModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
 
 export default function Collections() {
   const { api, logout } = useAuth();
@@ -36,31 +36,37 @@ export default function Collections() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<
-    "name" | "created_at" | "last_updated"
-  >("name");
+
+  type SortKey = "name" | "created_at" | "last_updated";
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
 
+  const labelMap: Record<SortKey, string> = {
+    name: "name",
+    created_at: "created",
+    last_updated: "last updated",
+  };
+
   useEffect(() => {
-    async function fetchAll() {
+    (async () => {
       setLoading(true);
       try {
         const pageSize = 100;
         let offset = 0;
         let total = Infinity;
-        const all: CollectionModel[] = [];
+        const acc: CollectionModel[] = [];
         while (offset < total) {
           const res = await api.collectionsList(
             { limit: pageSize, offset },
             { secure: true, format: "json" },
           );
-          const cols = res.data.collections || [];
-          all.push(...cols);
-          total = res.data.total_count ?? cols.length;
-          offset += cols.length;
-          if (!cols.length) break;
+          const chunk = res.data.collections || [];
+          acc.push(...chunk);
+          total = res.data.total_count ?? chunk.length;
+          offset += chunk.length;
+          if (!chunk.length) break;
         }
-        setCollections(all);
+        setCollections(acc);
       } catch (err: any) {
         console.error(err);
         if (err.error === "Unauthorized") logout();
@@ -68,8 +74,7 @@ export default function Collections() {
       } finally {
         setLoading(false);
       }
-    }
-    fetchAll();
+    })();
   }, [api, logout]);
 
   const handleCreate = async () => {
@@ -105,11 +110,19 @@ export default function Collections() {
   const filtered = collections
     .filter((c) => c.name?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      const aVal = (a[sortKey] || "").toString();
-      const bVal = (b[sortKey] || "").toString();
-      if (aVal < bVal) return sortAsc ? -1 : 1;
-      if (aVal > bVal) return sortAsc ? 1 : -1;
-      return 0;
+      let cmp: number;
+      if (sortKey === "name") {
+        cmp = a.name!.localeCompare(b.name!);
+      } else {
+        const aRaw =
+          (sortKey === "created_at" ? a.created_at : a.last_updated) ?? "";
+        const bRaw =
+          (sortKey === "created_at" ? b.created_at : b.last_updated) ?? "";
+        const aTime = aRaw ? new Date(aRaw).getTime() : 0;
+        const bTime = bRaw ? new Date(bRaw).getTime() : 0;
+        cmp = aTime - bTime;
+      }
+      return sortAsc ? cmp : -cmp;
     });
 
   return (
@@ -142,25 +155,35 @@ export default function Collections() {
             <Input
               placeholder="Search..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+              }}
               className="flex-1 min-w-0"
             />
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                setSortKey((k) =>
-                  k === "name"
-                    ? "last_updated"
-                    : k === "last_updated"
-                      ? "created_at"
-                      : "name",
-                );
-                setSortAsc((a) => !a);
+                if (sortKey === "name" && sortAsc) {
+                  setSortAsc(false);
+                } else if (sortKey === "name" && !sortAsc) {
+                  setSortKey("created_at");
+                  setSortAsc(true);
+                } else if (sortKey === "created_at" && sortAsc) {
+                  setSortAsc(false);
+                } else if (sortKey === "created_at" && !sortAsc) {
+                  setSortKey("last_updated");
+                  setSortAsc(true);
+                } else if (sortKey === "last_updated" && sortAsc) {
+                  setSortAsc(false);
+                } else {
+                  setSortKey("name");
+                  setSortAsc(true);
+                }
               }}
               className="flex-shrink-0"
             >
-              sort by {sortKey.replace("_", " ")} {sortAsc ? "↑" : "↓"}
+              sort by {labelMap[sortKey]} {sortAsc ? "↑" : "↓"}
             </Button>
           </div>
         </div>

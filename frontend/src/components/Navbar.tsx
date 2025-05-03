@@ -1,32 +1,31 @@
-
-import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useAuth } from "@/context/AuthContext"
-import { cn } from "@/lib/utils"
-import { jwtDecode } from "jwt-decode"
-import { Link, Navigate } from "react-router-dom"
-import { Menu, X } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
+import { jwtDecode } from "jwt-decode";
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 
 export function Navbar() {
-  const { token } = useAuth()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const { token } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   if (!token) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace />;
   }
 
-  let username: string | null = null
+  let username: string | null = null;
   try {
-    const decoded = jwtDecode<{ name?: string }>(token)
-    username = decoded.name ?? null
+    const decoded = jwtDecode<{ name?: string }>(token);
+    username = decoded.name ?? null;
   } catch {
-    username = null
+    username = null;
   }
 
   const navItems = [
     { to: "/feeds", label: "Feeds" },
     { to: "/collections", label: "Collections" },
-  ]
+  ];
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-background border-b">
@@ -43,7 +42,7 @@ export function Navbar() {
               to={item.to}
               className={cn(
                 "px-3 py-2 rounded-md text-sm font-medium text-muted-foreground",
-                "hover:bg-muted hover:text-foreground"
+                "hover:bg-muted hover:text-foreground",
               )}
             >
               {item.label}
@@ -54,14 +53,17 @@ export function Navbar() {
         <div className="hidden md:flex items-center space-x-2">
           <Link to="/user" className="flex items-center space-x-2">
             <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
-              <AvatarFallback>U</AvatarFallback>
+              {username ? (
+                <AvatarFallback>
+                  {username.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              ) : (
+                <AvatarImage
+                  src="https://github.com/shadcn.png"
+                  alt="User Avatar"
+                />
+              )}
             </Avatar>
-            {username && (
-              <span className="text-sm font-medium text-foreground">
-                {username}
-              </span>
-            )}
           </Link>
         </div>
 
@@ -70,7 +72,11 @@ export function Navbar() {
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
       </div>
 
@@ -84,7 +90,7 @@ export function Navbar() {
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "block px-3 py-2 rounded-md text-base font-medium text-muted-foreground",
-                  "hover:bg-muted hover:text-foreground"
+                  "hover:bg-muted hover:text-foreground",
                 )}
               >
                 {item.label}
@@ -95,7 +101,7 @@ export function Navbar() {
               onClick={() => setMobileOpen(false)}
               className={cn(
                 "flex items-center px-3 py-2 rounded-md text-base font-medium text-muted-foreground",
-                "hover:bg-muted hover:text-foreground"
+                "hover:bg-muted hover:text-foreground",
               )}
             >
               User
@@ -104,6 +110,5 @@ export function Navbar() {
         </div>
       )}
     </nav>
-  )
+  );
 }
-

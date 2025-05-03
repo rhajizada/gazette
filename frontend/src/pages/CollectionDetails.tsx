@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ItemPreview } from "@/components/ItemPreview";
+import { Navbar } from "@/components/Navbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Pagination,
   PaginationContent,
@@ -12,6 +13,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import type {
@@ -34,12 +36,22 @@ export default function CollectionDetail() {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
 
+  const [itemSearch, setItemSearch] = useState("");
+  type SortKey = "title" | "published_parsed";
+  const [itemSortKey, setItemSortKey] = useState<SortKey>("published_parsed");
+  const [itemSortAsc, setItemSortAsc] = useState(false);
+  const labelMap: Record<SortKey, string> = {
+    title: "title",
+    published_parsed: "published",
+  };
+
   useEffect(() => {
     if (!collectionID) return;
     setLoading(true);
-    api.collectionsDetail(collectionID, { secure: true, format: "json" })
-      .then(res => setCollection(res.data))
-      .catch(err => {
+    api
+      .collectionsDetail(collectionID, { secure: true, format: "json" })
+      .then((res) => setCollection(res.data))
+      .catch((err) => {
         if (err.status === 404) setNotFound(true);
         else {
           toast.error("Failed to load collection");
@@ -53,23 +65,26 @@ export default function CollectionDetail() {
   const fetchItems = useCallback(() => {
     if (!collectionID) return;
     setItemsLoading(true);
-    api.collectionsItemsList(
-      collectionID,
-      { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
-      { secure: true, format: "json" }
-    )
-      .then(res => {
+    api
+      .collectionsItemsList(
+        collectionID,
+        { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
+        { secure: true, format: "json" },
+      )
+      .then((res) => {
         setItems(res.data.items ?? []);
         setTotal(res.data.total_count ?? 0);
       })
-      .catch(err => {
+      .catch((err) => {
         if (err.error === "Unauthorized") logout();
         else console.error(err);
       })
       .finally(() => setItemsLoading(false));
   }, [api, collectionID, page, logout]);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   if (loading) return <Loader />;
   if (notFound || !collection) return <Navigate to="*" replace />;
@@ -77,17 +92,38 @@ export default function CollectionDetail() {
     return (
       <>
         <Navbar />
-        <div className="p-6 text-red-600">{error || "Collection not available"}</div>
+        <div className="p-6 text-red-600">
+          {error || "Collection not available"}
+        </div>
         <Footer />
       </>
     );
+
+  const displayed = items
+    .filter((it) =>
+      [it.title, it.description]
+        .filter(Boolean)
+        .some((text) => text!.toLowerCase().includes(itemSearch.toLowerCase())),
+    )
+    .sort((a, b) => {
+      let cmp: number;
+      if (itemSortKey === "title") {
+        cmp = a.title!.localeCompare(b.title!);
+      } else {
+        const aRaw = a.published_parsed;
+        const bRaw = b.published_parsed;
+        const aTime = aRaw ? new Date(aRaw).getTime() : 0;
+        const bTime = bRaw ? new Date(bRaw).getTime() : 0;
+        cmp = aTime - bTime;
+      }
+      return itemSortAsc ? cmp : -cmp;
+    });
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const pages: (number | "ellipsis")[] = [];
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else if (page <= 4)
-    pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
+  } else if (page <= 4) pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
   else if (page > totalPages - 4)
     pages.push(
       1,
@@ -96,9 +132,10 @@ export default function CollectionDetail() {
       totalPages - 3,
       totalPages - 2,
       totalPages - 1,
-      totalPages
+      totalPages,
     );
-  else pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages);
+  else
+    pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -108,26 +145,66 @@ export default function CollectionDetail() {
           <h1 className="text-4xl font-bold">{collection.name}</h1>
           {collection.last_updated && (
             <p className="text-sm text-gray-500 mt-1">
-              Last updated: {new Date(collection.last_updated).toLocaleDateString()}
+              Last updated:{" "}
+              {new Date(collection.last_updated).toLocaleDateString()}
             </p>
           )}
         </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Search..."
+              value={itemSearch}
+              onChange={(e) => {
+                setItemSearch(e.currentTarget.value);
+                setPage(1);
+              }}
+              className="flex-1 min-w-0"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-shrink-0"
+              onClick={() => {
+                if (itemSortKey === "title" && itemSortAsc) {
+                  setItemSortAsc(false);
+                } else if (itemSortKey === "title" && !itemSortAsc) {
+                  setItemSortKey("published_parsed");
+                  setItemSortAsc(true);
+                } else if (itemSortKey === "published_parsed" && itemSortAsc) {
+                  setItemSortAsc(false);
+                } else {
+                  setItemSortKey("title");
+                  setItemSortAsc(true);
+                }
+                setPage(1);
+              }}
+            >
+              sort by {labelMap[itemSortKey]} {itemSortAsc ? "↑" : "↓"}
+            </Button>
+          </div>
+        </div>
+
         {itemsLoading ? (
           <Loader />
+        ) : displayed.length === 0 ? (
+          <p className="text-center">No items found.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {items.map(item => (
+            {displayed.map((item) => (
               <ItemPreview key={item.id} item={item} />
             ))}
           </div>
         )}
+
         {totalPages > 1 && (
           <div className="mt-8 flex justify-center">
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
-                    onClick={() => setPage(page - 1)}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
                     aria-disabled={page === 1}
                   />
                 </PaginationItem>
@@ -145,11 +222,11 @@ export default function CollectionDetail() {
                         {p}
                       </PaginationLink>
                     </PaginationItem>
-                  )
+                  ),
                 )}
                 <PaginationItem>
                   <PaginationNext
-                    onClick={() => setPage(page + 1)}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     aria-disabled={page === totalPages}
                   />
                 </PaginationItem>
@@ -158,7 +235,9 @@ export default function CollectionDetail() {
           </div>
         )}
       </main>
-      <Footer />
+      <div className="mt-auto">
+        <Footer />
+      </div>
     </div>
   );
 }
@@ -170,4 +249,3 @@ function Loader() {
     </div>
   );
 }
-
