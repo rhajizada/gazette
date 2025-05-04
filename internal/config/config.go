@@ -33,6 +33,7 @@ type ServerConfig struct {
 	OAuth     OAuthConfig
 }
 
+// OAuthConfig holds OAuth provider settings.
 type OAuthConfig struct {
 	ClientID     string `env:"GAZETTE_OAUTH_CLIENT_ID,notEmpty"`
 	ClientSecret string `env:"GAZETTE_OAUTH_CLIENT_SECRET,notEmpty"`
@@ -40,9 +41,17 @@ type OAuthConfig struct {
 	RedirectURL  string `env:"GAZETTE_OAUTH_REDIRECT_URL,notEmpty"`
 }
 
+// OllamaConfig holds ollama settings.
 type OllamaConfig struct {
 	BaseUrl         string `env:"GAZETTE_OLLAMA_URL,notEmpty"`
 	EmbeddingsModel string `env:"GAZETTE_OLLAMA_EMBEDDINGS_MODEL,notEmpty"`
+}
+
+// QueuesConfig holds worker queue settings.
+type QueuesConfig struct {
+	Critical int `env:"GAZETTE_CRITICAL_QUEUES_COUNT" envDefault:"4"`
+	Default  int `env:"GAZETTE_DEFAULT_QUEUES_COUNT" envDefault:"2"`
+	Low      int `env:"GAZETTE_LOW_QUEUES_COUNT" envDefault:"2"`
 }
 
 // WorkerConfig holds worker-related settings.
@@ -50,6 +59,7 @@ type WorkerConfig struct {
 	Database PostgresConfig
 	Redis    RedisConfig
 	Ollama   OllamaConfig
+	Queues   QueuesConfig
 }
 
 // SchedulerConfig holds scheduler-related settings.

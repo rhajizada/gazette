@@ -1,4 +1,4 @@
-package tasks
+package workers
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
 				return err
 			}
 
-			ti, err := h.Client.Enqueue(task)
+			ti, err := h.Client.Enqueue(task, asynq.Queue("critical"))
 			if err != nil {
 				return err
 			}

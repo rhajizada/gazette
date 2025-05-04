@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/hibiken/asynq"
-	"github.com/rhajizada/gazette/internal/tasks"
+	"github.com/rhajizada/gazette/internal/workers"
 
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -64,21 +64,24 @@ func main() {
 		log.Panicf("failed to connect to Redis: %v", err)
 	}
 
-	server := asynq.NewServer(conn, asynq.Config{})
-	ollamaClient, err := tasks.GetOllamaClient(&cfg.Ollama)
+	serverConfig := workers.GetConfig(&cfg.Queues)
+
+	ollamaClient, err := workers.GetOllamaClient(&cfg.Ollama)
 	if err != nil {
 		log.Panicf("failed to initialize Ollama client: %v", err)
 	}
-	err = tasks.InitModels(ollamaClient, &cfg.Ollama)
+	err = workers.InitModels(ollamaClient, &cfg.Ollama)
 	if err != nil {
 		log.Panicf("failed to initialize models: %v", err)
 	}
 
-	handler := tasks.NewHandler(rq, &client, &cfg.Ollama)
+	server := asynq.NewServer(conn, *serverConfig)
+
+	handler := workers.NewHandler(rq, &client, &cfg.Ollama)
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeSyncData, handler.HandleDataSync)
-	mux.HandleFunc(tasks.TypeSyncFeed, handler.HandleFeedSync)
-	mux.HandleFunc(tasks.TypeEmbedItem, handler.HandleEmbedItem)
+	mux.HandleFunc(workers.TypeSyncData, handler.HandleDataSync)
+	mux.HandleFunc(workers.TypeSyncFeed, handler.HandleFeedSync)
+	mux.HandleFunc(workers.TypeEmbedItem, handler.HandleEmbedItem)
 
 	if err := server.Run(mux); err != nil {
 		log.Panicf("could not run worker: %v", err)

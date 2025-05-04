@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/mmcdole/gofeed"
 	"github.com/rhajizada/gazette/internal/repository"
-	"github.com/rhajizada/gazette/internal/tasks"
 	"github.com/rhajizada/gazette/internal/typeext"
+	"github.com/rhajizada/gazette/internal/workers"
 )
 
 // ListFeedsRequest wraps parameters for listing feeds.
@@ -199,8 +200,8 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 		return nil, Err
 	}
 
-	task, _ := tasks.NewSyncFeedTask(feed.ID)
-	s.Client.Enqueue(task)
+	task, _ := workers.NewSyncFeedTask(feed.ID)
+	s.Client.Enqueue(task, asynq.Queue("critical"))
 
 	sub, err := s.Repo.CreateUserFeedSubscription(ctx, repository.CreateUserFeedSubscriptionParams{UserID: r.UserID, FeedID: feed.ID})
 	if err != nil {

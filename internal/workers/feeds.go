@@ -1,4 +1,4 @@
-package tasks
+package workers
 
 import (
 	"context"
@@ -79,7 +79,7 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 		}
 		log.Printf("synced item %s from feed %s", itm.GUID, feedID)
 		task, _ := NewEmbedItemTask(r.ID)
-		tResp, err := h.Client.Enqueue(task)
+		tResp, err := h.Client.Enqueue(task, asynq.Queue("default"))
 		if err != nil {
 			return fmt.Errorf("failed to queue embedding task for item %s", r.ID)
 		}
