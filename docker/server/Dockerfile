@@ -1,11 +1,11 @@
 FROM node:20-alpine AS node-builder
 
-WORKDIR /src/frontend
+WORKDIR /src/ui
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY ui/package.json ui/package-lock.json ./
 RUN npm ci
 
-COPY frontend .
+COPY ui .
 RUN npm run build
 
 FROM golang:1.24-alpine AS builder
@@ -29,6 +29,6 @@ WORKDIR /app
 
 COPY --from=builder /src/bin/server .
 COPY --from=builder /src/data/sql/migrations data/sql/migrations
-COPY --from=node-builder /src/frontend/dist data/public
+COPY --from=node-builder /src/ui/dist data/public
 
 ENTRYPOINT ["./server"]
