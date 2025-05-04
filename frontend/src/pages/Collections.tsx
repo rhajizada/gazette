@@ -68,7 +68,6 @@ export default function Collections() {
         }
         setCollections(acc);
       } catch (err: any) {
-        console.error(err);
         if (err.error === "Unauthorized") logout();
         else {
           const message = await err.text();

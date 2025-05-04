@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { LogOut as LogOutIcon, User as UserIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceUser as UserModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
 
@@ -21,11 +22,13 @@ export default function UserPage() {
       .userList({ format: "json" })
       .then((res) => setUser(res.data))
       .catch((err) => {
-        console.error(err);
         setError("Failed to load user data.");
         if (err.error === "Unauthorized") {
           logout();
           navigate("/login", { replace: true });
+        } else {
+          const message = err.text();
+          toast.error(message || "failed to fetch user");
         }
       })
       .finally(() => setLoading(false));

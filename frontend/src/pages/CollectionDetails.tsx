@@ -54,10 +54,12 @@ export default function CollectionDetail() {
       .catch((err) => {
         if (err.status === 404) setNotFound(true);
         else {
-          const message = err.text();
-          toast.error(message || "failed to load collections");
-          setError("Failed to load collections");
           if (err.error === "Unauthorized") logout();
+          else {
+            const message = err.text();
+            toast.error(message || "failed to fetch collection");
+            setError("Failed to fetch collection");
+          }
         }
       })
       .finally(() => setLoading(false));
@@ -78,7 +80,10 @@ export default function CollectionDetail() {
       })
       .catch((err) => {
         if (err.error === "Unauthorized") logout();
-        else console.error(err);
+        else {
+          const message = err.text();
+          toast.error(message || "failed to list items in collection");
+        }
       })
       .finally(() => setItemsLoading(false));
   }, [api, collectionID, page, logout]);

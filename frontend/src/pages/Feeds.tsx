@@ -60,7 +60,6 @@ export default function Feeds() {
         }
         setAllFeeds(acc);
       } catch (err: any) {
-        console.error(err);
         if (err.error === "Unauthorized") logout();
         else {
           const message = await err.text();
@@ -106,8 +105,11 @@ export default function Feeds() {
       setNewUrl("");
       toast.success("feed imported");
     } catch (err: any) {
-      const message = await err.text();
-      toast.error(message || "failed to create feed");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to create feed");
+      }
     } finally {
       setCreating(false);
     }

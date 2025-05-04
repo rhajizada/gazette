@@ -75,7 +75,6 @@ export default function ItemDetails() {
         } else {
           const message = err.text();
           toast.error(message || "failed to load item");
-          toast.error("failed to load item");
           setError("failed to load item");
           if (err.error === "Unauthorized") logout();
         }
@@ -195,8 +194,7 @@ export default function ItemDetails() {
       );
     } catch (err: any) {
       const message = await err.text();
-      toast.error(message || "failed updating collection");
-      toast.error("failed updating collection");
+      toast.error(message || "failed to update collection");
     }
   };
 

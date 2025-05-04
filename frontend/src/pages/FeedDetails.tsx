@@ -86,7 +86,10 @@ export default function FeedDetails() {
       })
       .catch((err) => {
         if (err.error === "Unauthorized") logout();
-        else console.error(err);
+        else {
+          const message = err.text();
+          toast.error(message || "failed to list items");
+        }
       })
       .finally(() => setItemsLoading(false));
   }, [api, feedID, page, logout]);
@@ -106,8 +109,12 @@ export default function FeedDetails() {
         await api.feedsSubscribeUpdate(feed.id!, { format: "json" });
         setSubscribed(true);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to update feed");
+      }
     } finally {
       setSubLoading(false);
     }
