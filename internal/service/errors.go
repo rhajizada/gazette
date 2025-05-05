@@ -1,10 +1,17 @@
 package service
 
-import "errors"
+type ServiceError struct {
+	Message string
+	Code    uint
+}
 
-var (
-	ErrNotFound      = errors.New("no rows in result set")
-	ErrAlreadyExists = errors.New("unique constraint violation")
-	ErrBadInput      = errors.New("foreign key violation")
-	Err              = errors.New("application error")
-)
+func (e ServiceError) Error() string {
+	return e.Message
+}
+
+func NewError(message string, code uint) ServiceError {
+	return ServiceError{
+		Message: message,
+		Code:    code,
+	}
+}

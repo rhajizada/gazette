@@ -14,7 +14,7 @@ import (
 func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
 	count, err := h.Repo.CountFeeds(ctx)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("failed listing feeds: %v", err)
+		return fmt.Errorf("failed to list feeds: %v", err)
 	}
 	if count == 0 {
 		return nil
@@ -33,7 +33,7 @@ func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
 			Offset: int32(offset),
 		})
 		if err != nil {
-			return fmt.Errorf("failed listing feeds (offset %d): %v", offset, err)
+			return fmt.Errorf("failed to list feeds (offset %d): %v", offset, err)
 		}
 
 		for _, feed := range feeds {

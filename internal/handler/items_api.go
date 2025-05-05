@@ -40,15 +40,12 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 			Offset: params.Offset,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			resp = &service.ListItemsResponse{
-				Offset:     params.Offset,
-				Limit:      params.Limit,
-				TotalCount: 0,
-				Items:      make([]service.Item, 0),
-			}
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, "failed listing user liked items", http.StatusInternalServerError)
+			http.Error(w, "failed to list liked items", http.StatusBadRequest)
 			return
 		}
 	}
@@ -73,17 +70,18 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	itemPath := r.PathValue("itemID")
 	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", itemPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
 	item, err := h.Service.GetItem(r.Context(), service.GetItemRequest{UserID: userID, ItemID: itemID})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("item %s not found", itemID), http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed fetching item %s", itemID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to fetch item %s", itemID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -107,7 +105,7 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 	itemPath := r.PathValue("itemID")
 	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", itemPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
@@ -117,11 +115,12 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 			ItemID: itemID,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrBadInput) {
-			http.Error(w, fmt.Sprintf("failed liking item %s", itemID), http.StatusBadRequest)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed liking item %s", itemID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to like item %s", itemID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -145,7 +144,7 @@ func (h *Handler) UnlikeItem(w http.ResponseWriter, r *http.Request) {
 	itemPath := r.PathValue("itemID")
 	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", itemPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
@@ -155,11 +154,12 @@ func (h *Handler) UnlikeItem(w http.ResponseWriter, r *http.Request) {
 			ItemID: itemID,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("user has not liked item %s", itemID), http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed unliking item %s", itemID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to like item %s", itemID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -183,7 +183,7 @@ func (h *Handler) ListItemCollections(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 	itemID, err := uuid.Parse(r.PathValue("itemID"))
 	if err != nil {
-		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		http.Error(w, "%s is not a valid id", http.StatusBadRequest)
 		return
 	}
 
@@ -203,15 +203,12 @@ func (h *Handler) ListItemCollections(w http.ResponseWriter, r *http.Request) {
 			Offset: params.Offset,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			resp = &service.ListCollectionsResponse{
-				Offset:      params.Offset,
-				Limit:       params.Limit,
-				TotalCount:  0,
-				Collections: make([]service.Collection, 0),
-			}
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed listing collections item %s is in", itemID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to list collections with item %s", itemID), http.StatusBadRequest)
 			return
 		}
 	}

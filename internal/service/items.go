@@ -4,80 +4,44 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rhajizada/gazette/internal/repository"
 )
-
-// GetItemRequest wraps parameters to retrieve a single item and its like status.
-type GetItemRequest struct {
-	UserID uuid.UUID
-	ItemID uuid.UUID
-}
-
-// Item is the common model for items in API responses
-type Item struct {
-	ID              uuid.UUID  `json:"id"`
-	FeedID          uuid.UUID  `json:"feed_id"`
-	Title           *string    `json:"title,omitempty"`
-	Description     *string    `json:"description,omitempty"`
-	Content         *string    `json:"content,omitempty"`
-	Link            string     `json:"link"`
-	Links           []string   `json:"links,omitempty"`
-	UpdatedParsed   *time.Time `json:"updated_parsed,omitempty"`
-	PublishedParsed *time.Time `json:"published_parsed,omitempty"`
-	Authors         Authors    `json:"authors,omitempty"`
-	GUID            *string    `json:"guid,omitempty"`
-	Image           any        `json:"image,omitempty"`
-	Categories      []string   `json:"categories,omitempty"`
-	Enclosures      any        `json:"enclosures,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	Liked           bool       `json:"liked"`
-	LikedAt         *time.Time `json:"liked_at,omitempty"`
-}
-
-// ListItemsResponse wraps paginated items
-type ListItemsResponse struct {
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
-	TotalCount int64  `json:"total_count"`
-	Items      []Item `json:"items"`
-}
-
-// LikeItemResponse wraps response which inlude liked at time
-type LikeItemResponse struct {
-	LikedAt time.Time `json:"liked_at"`
-}
 
 // ListUserLikedItems returns paginated items the user has liked, with liked timestamps.
 func (s *Service) ListUserLikedItems(ctx context.Context, r repository.ListUserLikedItemsParams) (*ListItemsResponse, error) {
 	total, err := s.Repo.CountLikedItems(ctx, r.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			total = 0
 		} else {
-			return nil, Err
+			return nil, NewError(
+				"failed to count liked items",
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
-	// fetch liked items
-	rows, err := s.Repo.ListUserLikedItems(ctx, r)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		} else {
-			return nil, Err
+	var rows []repository.ListUserLikedItemsRow
+	if total == 0 {
+		rows = make([]repository.ListUserLikedItemsRow, 0)
+	} else {
+		rows, err = s.Repo.ListUserLikedItems(ctx, r)
+		if err != nil {
+			return nil, NewError(
+				"failed to list liked items",
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
-	// map to service Item
 	items := make([]Item, len(rows))
 	for i, row := range rows {
-		// map authors
 		auths := make(Authors, len(row.Authors))
 		for j, a := range row.Authors {
 			auths[j] = Person{Name: a.Name, Email: a.Email}
@@ -119,9 +83,16 @@ func (s *Service) GetItem(ctx context.Context, r GetItemRequest) (*Item, error) 
 	row, err := s.Repo.GetItemByID(ctx, r.ItemID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, NewError(
+				fmt.Sprintf("item %s not found", r.ItemID),
+				http.StatusNotFound,
+			)
+		} else {
+			return nil, NewError(
+				fmt.Sprintf("failed to fetch item %s", r.ItemID),
+				http.StatusInternalServerError,
+			)
 		}
-		return nil, Err
 	}
 
 	// determine like status
@@ -167,22 +138,32 @@ func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParam
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return nil, ErrAlreadyExists
+			return nil, NewError(
+				fmt.Sprintf("already liked item %s", r.ItemID),
+				http.StatusBadRequest,
+			)
 		}
-		return nil, Err
+		return nil, NewError(
+			fmt.Sprintf("failed to like item %s", r.ItemID),
+			http.StatusInternalServerError,
+		)
 	}
-	resp := LikeItemResponse{LikedAt: like.LikedAt}
-	return &resp, nil
+	return &LikeItemResponse{LikedAt: like.LikedAt}, nil
 }
 
 // UnlikeItem removes a like from an item.
 func (s *Service) UnlikeItem(ctx context.Context, r repository.DeleteUserLikeParams) error {
 	if err := s.Repo.DeleteUserLike(ctx, r); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
-		} else {
-			return Err
+			return NewError(
+				fmt.Sprintf("like for item %s not found", r.ItemID),
+				http.StatusNotFound,
+			)
 		}
+		return NewError(
+			fmt.Sprintf("failed to unlike item %s", r.ItemID),
+			http.StatusInternalServerError,
+		)
 	}
 	return nil
 }
@@ -195,33 +176,31 @@ func (s *Service) ListItemCollections(ctx context.Context, r repository.ListColl
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			total = 0
 		} else {
-			return nil, Err
+			return nil, NewError(
+				fmt.Sprintf("failed to count collection with item %s", r.ItemID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
 	var rows []repository.Collection
-
 	if total == 0 {
-		rows = make([]repository.Collection, 0)
+		rows = []repository.Collection{}
 	} else {
-		rows, err = s.Repo.ListCollectionsByItemID(ctx, repository.ListCollectionsByItemIDParams{
-			ItemID: r.ItemID,
-			UserID: r.UserID,
-			Limit:  r.Limit,
-			Offset: r.Offset,
-		})
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		} else {
-			return nil, Err
+		rows, err = s.Repo.ListCollectionsByItemID(ctx, r)
+		if err != nil {
+			return nil, NewError(
+				fmt.Sprintf("failed to list collections for item %s", r.ItemID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
-	collections := make([]Collection, len(rows))
+	cols := make([]Collection, len(rows))
 	for i, row := range rows {
-		collections[i] = Collection{
+		cols[i] = Collection{
 			ID:          row.ID,
 			Name:        row.Name,
 			CreatedAt:   row.CreatedAt,
@@ -233,6 +212,6 @@ func (s *Service) ListItemCollections(ctx context.Context, r repository.ListColl
 		Limit:       r.Limit,
 		Offset:      r.Offset,
 		TotalCount:  total,
-		Collections: collections,
+		Collections: cols,
 	}, nil
 }

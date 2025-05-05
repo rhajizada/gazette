@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,9 +26,15 @@ func (s *Service) GetUserByID(ctx context.Context, userID uuid.UUID) (*User, err
 	user, err := s.Repo.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, NewError(
+				fmt.Sprintf("user %s not found", userID),
+				http.StatusNotFound,
+			)
 		} else {
-			return nil, Err
+			return nil, NewError(
+				fmt.Sprintf("failed to fetch user %s", userID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 

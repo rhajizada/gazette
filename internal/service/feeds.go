@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -16,86 +16,6 @@ import (
 	"github.com/rhajizada/gazette/internal/typeext"
 	"github.com/rhajizada/gazette/internal/workers"
 )
-
-// ListFeedsRequest wraps parameters for listing feeds.
-type ListFeedsRequest struct {
-	UserID       uuid.UUID
-	SubscbedOnly bool
-	Offset       int32
-	Limit        int32
-}
-
-// CreateFeedRequest wraps parameters to create or subscribe to a feed.
-type CreateFeedRequest struct {
-	FeedURL string
-	UserID  uuid.UUID
-}
-
-// GetFeedRequest wraps parameters to retrieve a feed and its subscription status.
-type GetFeedRequest struct {
-	repository.GetUserFeedSubscriptionParams
-}
-
-// DeleteFeedRequest wraps parameters to delete a feed entirely.
-type DeleteFeedRequest struct {
-	FeedID uuid.UUID
-}
-
-// SubscribeToFeedRequest wraps parameters to subscribe a user to a feed.
-type SubscribeToFeedRequest struct {
-	repository.CreateUserFeedSubscriptionParams
-}
-
-// UnsubscribeFromFeedRequest wraps parameters to remove a subscription.
-type UnsubscribeFromFeedRequest struct {
-	repository.DeleteUserFeedSubscriptionParams
-}
-
-// ListFeedItemsRequest wraps parameters for listing feed items with like info.
-type ListFeedItemsRequest struct {
-	repository.ListItemsByFeedIDForUserParams
-}
-
-// ListFeedsResponse wraps paginated feeds
-type ListFeedsResponse struct {
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
-	TotalCount int64  `json:"total_count"`
-	Feeds      []Feed `json:"feeds"`
-}
-
-type SubscibeToFeedResponse struct {
-	SubscribedAt *time.Time `json:"subscribed_at"`
-}
-
-type Feed struct {
-	ID              uuid.UUID  `json:"id"`
-	Title           *string    `json:"title,omitempty"`
-	Description     *string    `json:"description,omitempty"`
-	Link            *string    `json:"link,omitempty"`
-	FeedLink        string     `json:"feed_link"`
-	Links           []string   `json:"links,omitempty"`
-	UpdatedParsed   *time.Time `json:"updated_parsed,omitempty"`
-	PublishedParsed *time.Time `json:"published_parsed,omitempty"`
-	Authors         Authors    `json:"authors,omitempty"`
-	Language        *string    `json:"language,omitempty"`
-	Image           any        `json:"image,omitempty"`
-	Copyright       *string    `json:"copyright,omitempty"`
-	Generator       *string    `json:"generator,omitempty"`
-	Categories      []string   `json:"categories,omitempty"`
-	FeedType        *string    `json:"feed_type,omitempty"`
-	FeedVersion     *string    `json:"feed_version,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	LastUpdatedAt   time.Time  `json:"last_updated_at"`
-	Subscribed      bool       `json:"subscribed"`
-	SubscribedAt    *time.Time `json:"subscribed_at,omitempty"`
-}
-
-// ListItemsByFeedIDRequest wraps parameters for listing items from a feed with user-specific like info.
-// Embeds FeedID, UserID, Limit, and Offset.
-type ListItemsByFeedIDRequest struct {
-	repository.ListItemsByFeedIDForUserParams
-}
 
 // ListFeeds retrieves a paginated list of feeds, optionally only subscribed.
 func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeedsResponse, error) {
@@ -108,21 +28,32 @@ func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeeds
 		total, err = s.Repo.CountFeeds(ctx)
 	}
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			total = 0
+		} else {
+			return nil, NewError(
+				"failed to count feeds",
+				http.StatusInternalServerError,
+			)
+		}
 	}
 
-	// fetch
-	rows, err := s.Repo.ListFeedsByUserID(ctx, repository.ListFeedsByUserIDParams{
-		UserID:  r.UserID,
-		Column2: r.SubscbedOnly,
-		Offset:  r.Offset,
-		Limit:   r.Limit,
-	})
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		} else {
-			return nil, Err
+	var rows []repository.ListFeedsByUserIDRow
+
+	if total == 0 {
+		rows = make([]repository.ListFeedsByUserIDRow, 0)
+	} else {
+		rows, err = s.Repo.ListFeedsByUserID(ctx, repository.ListFeedsByUserIDParams{
+			UserID:  r.UserID,
+			Column2: r.SubscbedOnly,
+			Offset:  r.Offset,
+			Limit:   r.Limit,
+		})
+		if err != nil {
+			return nil, NewError(
+				"failed to list feeds",
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
@@ -170,7 +101,10 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 	parser := gofeed.NewParser()
 	remote, err := parser.ParseURL(r.FeedURL)
 	if err != nil {
-		return nil, ErrNotFound
+		return nil, NewError(
+			fmt.Sprintf("invalid feed URL %s", r.FeedURL),
+			http.StatusBadRequest,
+		)
 	}
 
 	feed, err := s.Repo.CreateFeed(ctx, repository.CreateFeedParams{
@@ -191,13 +125,17 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 		FeedVersion:     &remote.FeedVersion,
 	})
 	if err != nil {
-		log.Printf("%v", err)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			log.Printf("%v", pgErr)
-			return nil, ErrAlreadyExists
+			return nil, NewError(
+				fmt.Sprintf("feed %s already exists", r.FeedURL),
+				http.StatusConflict,
+			)
 		}
-		return nil, Err
+		return nil, NewError(
+			fmt.Sprintf("failed to load create feed %s", r.FeedURL),
+			http.StatusInternalServerError,
+		)
 	}
 
 	task, _ := workers.NewSyncFeedTask(feed.ID)
@@ -205,11 +143,10 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 
 	sub, err := s.Repo.CreateUserFeedSubscription(ctx, repository.CreateUserFeedSubscriptionParams{UserID: r.UserID, FeedID: feed.ID})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return nil, ErrAlreadyExists
-		}
-		return nil, Err
+		return nil, NewError(
+			fmt.Sprintf("failed to subscribe to feed %s", feed.ID),
+			http.StatusInternalServerError,
+		)
 	}
 
 	auths := make(Authors, len(feed.Authors))
@@ -245,7 +182,17 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 func (s *Service) GetFeed(ctx context.Context, r repository.GetUserFeedSubscriptionParams) (*Feed, error) {
 	feed, err := s.Repo.GetFeedByID(ctx, r.FeedID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, NewError(
+				fmt.Sprintf("feed %s not found", r.FeedID),
+				http.StatusNotFound,
+			)
+		} else {
+			return nil, NewError(
+				fmt.Sprintf("failed to fetch feed %s", r.FeedID),
+				http.StatusInternalServerError,
+			)
+		}
 	}
 
 	// check subscription
@@ -287,9 +234,15 @@ func (s *Service) DeleteFeed(ctx context.Context, r DeleteFeedRequest) error {
 	err := s.Repo.DeleteFeedByID(ctx, r.FeedID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
+			return NewError(
+				fmt.Sprintf("feed %s not found", r.FeedID),
+				http.StatusNotFound,
+			)
 		} else {
-			return Err
+			return NewError(
+				fmt.Sprintf("failed to delete feed %s", r.FeedID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 	return nil
@@ -300,11 +253,26 @@ func (s *Service) SubscribeToFeed(ctx context.Context, r repository.CreateUserFe
 	sub, err := s.Repo.CreateUserFeedSubscription(ctx, r)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return nil, ErrAlreadyExists
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case pgerrcode.UniqueViolation:
+				return nil, NewError(
+					fmt.Sprintf("already subscribed to feed %s", r.FeedID),
+					http.StatusBadRequest,
+				)
+			case pgerrcode.ForeignKeyViolation:
+				return nil, NewError(
+					fmt.Sprintf("feed %s not found", r.FeedID),
+					http.StatusBadRequest,
+				)
+			}
 		}
-		return nil, Err
+		return nil, NewError(
+			fmt.Sprintf("failed to subsribe to feed %s", r.FeedID),
+			http.StatusInternalServerError,
+		)
 	}
+
 	return &SubscibeToFeedResponse{
 		SubscribedAt: &sub.SubscribedAt,
 	}, nil
@@ -315,9 +283,15 @@ func (s *Service) UnsubscribeFromFeed(ctx context.Context, r repository.DeleteUs
 	err := s.Repo.DeleteUserFeedSubscription(ctx, r)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
+			return NewError(
+				fmt.Sprintf("user not subscribed to feed %s", r.FeedID),
+				http.StatusBadRequest,
+			)
 		} else {
-			return Err
+			return NewError(
+				fmt.Sprintf("failed to unsubscrive from feed %s", r.FeedID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 	return nil
@@ -328,18 +302,25 @@ func (s *Service) ListItemsByFeedID(ctx context.Context, r repository.ListItemsB
 	total, err := s.Repo.CountItemsByFeedID(ctx, r.FeedID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			total = 0
 		} else {
-			return nil, Err
+			return nil, NewError(
+				fmt.Sprintf("failed to list items in feed %s", r.FeedID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
-	rows, err := s.Repo.ListItemsByFeedIDForUser(ctx, r)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		} else {
-			return nil, Err
+	var rows []repository.ListItemsByFeedIDForUserRow
+	if total == 0 {
+		rows = make([]repository.ListItemsByFeedIDForUserRow, 0)
+	} else {
+		rows, err = s.Repo.ListItemsByFeedIDForUser(ctx, r)
+		if err != nil {
+			return nil, NewError(
+				fmt.Sprintf("failed to list items in feed %s", r.FeedID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 

@@ -24,12 +24,14 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 	user, err := h.Service.GetUserByID(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			http.Error(w, "user not found", http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, "failed fetching user", http.StatusInternalServerError)
+			http.Error(w, "failed to fetch user", http.StatusBadRequest)
+			return
 		}
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

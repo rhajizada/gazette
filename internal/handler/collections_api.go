@@ -41,15 +41,12 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 			Offset: params.Offset,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			resp = &service.ListCollectionsResponse{
-				Offset:      params.Offset,
-				Limit:       params.Limit,
-				TotalCount:  0,
-				Collections: make([]service.Collection, 0),
-			}
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, "failed listing collections", http.StatusInternalServerError)
+			http.Error(w, "failed to list collections", http.StatusBadRequest)
 			return
 		}
 	}
@@ -83,11 +80,12 @@ func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
 
 	col, err := h.Service.CreateCollection(r.Context(), query)
 	if err != nil {
-		if errors.Is(err, service.ErrAlreadyExists) {
-			http.Error(w, fmt.Sprintf("collection %s already exists", req.Name), http.StatusConflict)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed creting collection %s", req.Name), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to create collection %s", req.Name), http.StatusBadRequest)
 			return
 		}
 	}
@@ -111,17 +109,18 @@ func (h *Handler) GetCollectionByID(w http.ResponseWriter, r *http.Request) {
 	path := r.PathValue("collectionID")
 	colID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", path), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 
-	col, err := h.Service.GetCollection(r.Context(), colID)
+	col, err := h.Service.GetCollectionByID(r.Context(), colID)
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("collection %s not found", colID), http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed fetching collection %s", colID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to fetch collection %s", colID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -151,11 +150,12 @@ func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
 
 	err = h.Service.DeleteCollection(r.Context(), colID)
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("collection %s not found", colID), http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed deleting collection %s", colID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to delete collection %s", colID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -178,13 +178,13 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 	colPath := r.PathValue("collectionID")
 	colID, err := uuid.Parse(colPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", colPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", colPath), http.StatusBadRequest)
 		return
 	}
 	itemPath := r.PathValue("itemID")
 	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", itemPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
@@ -194,11 +194,12 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 			ItemID:       itemID,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrBadInput) {
-			http.Error(w, fmt.Sprintf("failed adding item %s to collection %s", itemID, colID), http.StatusBadRequest)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed adding item %s to collection %s", itemID, colID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to add item %s to collection %s", itemID, colID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -221,13 +222,13 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 	colPath := r.PathValue("collectionID")
 	colID, err := uuid.Parse(colPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", colPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", colPath), http.StatusBadRequest)
 		return
 	}
 	itemPath := r.PathValue("itemID")
 	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", itemPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
@@ -237,11 +238,12 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 			ItemID:       itemID,
 		})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("collection %s does not include item %s", colID, itemID), http.StatusBadRequest)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
 			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed adding item %s to collection %s", itemID, colID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to remove item %s from collection %s", itemID, colID), http.StatusBadRequest)
 			return
 		}
 	}
@@ -266,12 +268,12 @@ func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request
 	colPath := r.PathValue("collectionID")
 	colID, err := uuid.Parse(colPath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %s", colPath), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", colPath), http.StatusBadRequest)
 		return
 	}
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("bad input: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -286,15 +288,12 @@ func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request
 		},
 	})
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) {
-			resp = &service.ListCollectionItemsResponse{
-				Offset:     params.Offset,
-				Limit:      params.Limit,
-				TotalCount: 0,
-				Items:      make([]service.Item, 0),
-			}
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed listing items in collection %s", colID), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to list items in collection %s", colID), http.StatusBadRequest)
 			return
 		}
 	}

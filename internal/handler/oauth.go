@@ -70,8 +70,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) {
 			userExists = false
 		} else {
-			msg := fmt.Sprintf("failed fetching user: %v", err)
-			http.Error(w, msg, http.StatusInternalServerError)
+			http.Error(w, "failed to fetch user", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -83,7 +82,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 			Email: claims.Email,
 		})
 		if err != nil {
-			msg := fmt.Sprintf("failed creating user: %v", err)
+			msg := fmt.Sprintf("failed to create user: %v", err)
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
 		}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,62 +14,32 @@ import (
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
-// Collection represents a user's collection of items
-type Collection struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	CreatedAt   time.Time `json:"created_at"`
-	LastUpdated time.Time `json:"last_updated"`
-}
-
-// ListCollectionItemsRequest wraps parameters to list collection items
-type ListCollectionItemsRequest struct {
-	UserID uuid.UUID
-	repository.ListItemsInCollectionParams
-}
-
-// ListCollectionsResponse wraps a paginated list of collections for a user
-type ListCollectionsResponse struct {
-	Limit       int32        `json:"limit"`
-	Offset      int32        `json:"offset"`
-	TotalCount  int64        `json:"total_count"`
-	Collections []Collection `json:"collections"`
-}
-
-// ListCollectionItemsResponse wraps a paginated list of items in a collection
-type ListCollectionItemsResponse struct {
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
-	TotalCount int64  `json:"total_count"`
-	Items      []Item `json:"items"`
-}
-
-// AddItemToCollectionResponse
-type AddItemToCollectionResponse struct {
-	AddedAt time.Time `json:"added_at"`
-}
-
 // ListCollections retrieves a paginated list of collections for a user.
 func (s *Service) ListCollections(ctx context.Context, r repository.ListCollectionsByUserParams) (*ListCollectionsResponse, error) {
 	total, err := s.Repo.CountCollectionsByUserID(ctx, r.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			total = 0
 		} else {
-			return nil, Err
+			return nil, NewError(
+				"failed to count collections",
+				http.StatusInternalServerError,
+			)
 		}
 	}
 
-	rows, err := s.Repo.ListCollectionsByUser(ctx, repository.ListCollectionsByUserParams{
-		UserID: r.UserID,
-		Limit:  r.Limit,
-		Offset: r.Offset,
-	})
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		} else {
-			return nil, Err
+	var rows []repository.Collection
+
+	if total == 0 {
+		rows = make([]repository.Collection, 0)
+	} else {
+		rows, err = s.Repo.ListCollectionsByUser(ctx, repository.ListCollectionsByUserParams{
+			UserID: r.UserID,
+			Limit:  r.Limit,
+			Offset: r.Offset,
+		})
+		if err != nil {
+			return nil, NewError("failed to list collections", http.StatusInternalServerError)
 		}
 	}
 
@@ -95,9 +67,15 @@ func (s *Service) CreateCollection(ctx context.Context, r repository.CreateColle
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return nil, ErrAlreadyExists
+			return nil, NewError(
+				fmt.Sprintf("collection %s already exists", col.Name),
+				http.StatusConflict,
+			)
 		}
-		return nil, Err
+		return nil, NewError(
+			fmt.Sprintf("failed to create collection %s", col.Name),
+			http.StatusInternalServerError,
+		)
 	}
 	return &Collection{
 		ID:          col.ID,
@@ -107,14 +85,20 @@ func (s *Service) CreateCollection(ctx context.Context, r repository.CreateColle
 	}, nil
 }
 
-// GetCollection retrieves a single collection by ID.
-func (s *Service) GetCollection(ctx context.Context, collectionID uuid.UUID) (*Collection, error) {
+// GetCollectionByID retrieves a single collection by ID.
+func (s *Service) GetCollectionByID(ctx context.Context, collectionID uuid.UUID) (*Collection, error) {
 	col, err := s.Repo.GetCollectionByID(ctx, collectionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, NewError(
+				fmt.Sprintf("collection %s not found", collectionID),
+				http.StatusNotFound,
+			)
 		} else {
-			return nil, Err
+			return nil, NewError(
+				fmt.Sprintf("failed to fetch collection %s", collectionID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 	return &Collection{
@@ -129,9 +113,15 @@ func (s *Service) GetCollection(ctx context.Context, collectionID uuid.UUID) (*C
 func (s *Service) DeleteCollection(ctx context.Context, collectionID uuid.UUID) error {
 	if err := s.Repo.DeleteCollectionByID(ctx, collectionID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
+			return NewError(
+				fmt.Sprintf("collection %s not found", collectionID),
+				http.StatusNotFound,
+			)
 		} else {
-			return Err
+			return NewError(
+				fmt.Sprintf("failed to delete collection %s", collectionID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 	return nil
@@ -142,10 +132,34 @@ func (s *Service) AddItemToCollection(ctx context.Context, r repository.AddItemT
 	rec, err := s.Repo.AddItemToCollection(ctx, r)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return nil, ErrBadInput
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case pgerrcode.UniqueViolation:
+				return nil, NewError(
+					fmt.Sprintf("item %s is already in collection %s", r.ItemID, r.CollectionID),
+					http.StatusBadRequest,
+				)
+			case pgerrcode.ForeignKeyViolation:
+				switch pgErr.ConstraintName {
+				case "collection_items_collection_id_fkey":
+					return nil, NewError(
+						fmt.Sprintf("collection %s not found", r.CollectionID),
+						http.StatusBadRequest,
+					)
+				case "collection_items_item_id_fkey":
+					return nil, NewError(
+						fmt.Sprintf("item %s not found", r.CollectionID),
+						http.StatusBadRequest,
+					)
+				default:
+					return nil, NewError("invalid reference", http.StatusBadRequest)
+				}
+			}
 		} else {
-			return nil, err
+			return nil, NewError(
+				fmt.Sprintf("failed to update collection %s", r.CollectionID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 	return &AddItemToCollectionResponse{
@@ -157,9 +171,15 @@ func (s *Service) AddItemToCollection(ctx context.Context, r repository.AddItemT
 func (s *Service) RemoveItemFromCollection(ctx context.Context, r repository.RemoveItemFromCollectionParams) error {
 	if err := s.Repo.RemoveItemFromCollection(ctx, r); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
+			return NewError(
+				fmt.Sprintf("item %s is not in collection %s", r.ItemID, r.CollectionID),
+				http.StatusBadRequest,
+			)
 		} else {
-			return Err
+			return NewError(
+				fmt.Sprintf("failed to remove item %s from collection %s", r.ItemID, r.CollectionID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 	return nil
@@ -170,22 +190,29 @@ func (s *Service) ListCollectionItems(ctx context.Context, r ListCollectionItems
 	total, err := s.Repo.CountItemsInCollection(ctx, r.CollectionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			total = 0
 		} else {
-			return nil, Err
+			return nil, NewError(
+				fmt.Sprintf("failed counting items in collection %s", r.CollectionID),
+				http.StatusInternalServerError)
 		}
 	}
 
-	rows, err := s.Repo.ListItemsInCollection(ctx, repository.ListItemsInCollectionParams{
-		CollectionID: r.CollectionID,
-		Limit:        r.Limit,
-		Offset:       r.Offset,
-	})
-	if err != nil && err != sql.ErrNoRows {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		} else {
-			return nil, Err
+	var rows []repository.ListItemsInCollectionRow
+
+	if total == 0 {
+		rows = make([]repository.ListItemsInCollectionRow, 0)
+	} else {
+		rows, err = s.Repo.ListItemsInCollection(ctx, repository.ListItemsInCollectionParams{
+			CollectionID: r.CollectionID,
+			Limit:        r.Limit,
+			Offset:       r.Offset,
+		})
+		if err != nil {
+			return nil, NewError(
+				fmt.Sprintf("failed to list items in colllection %s", r.CollectionID),
+				http.StatusInternalServerError,
+			)
 		}
 	}
 

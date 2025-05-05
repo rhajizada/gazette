@@ -23,7 +23,7 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 
 	data, err := h.Repo.GetFeedByID(ctx, feedID)
 	if err != nil {
-		return fmt.Errorf("failed fetching feed %q: %v", feedID, err)
+		return fmt.Errorf("failed to feed %q: %v", feedID, err)
 	}
 
 	fp := gofeed.NewParser()

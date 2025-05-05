@@ -42,7 +42,7 @@ func main() {
 
 	id, err := scheduler.Register("@every 30m", dataSyncTask, asynq.Queue("critical"))
 	if err != nil {
-		log.Panicf("failed scheduling data sync task: %v", err)
+		log.Panicf("failed to schedule data sync task: %v", err)
 	}
 	log.Printf("scheduled data sync task %s", id)
 

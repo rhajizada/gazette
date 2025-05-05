@@ -44,7 +44,7 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 
 	resp, err := client.Embeddings(ctx, &req)
 	if err != nil {
-		return fmt.Errorf("failed generating embedding for item %s: %v", itemID, err)
+		return fmt.Errorf("failed to generate embedding for item %s: %v", itemID, err)
 	}
 	log.Printf(
 		"task %s - generated embddings for item %s ",
@@ -58,7 +58,7 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		exists = false
 	} else {
-		return fmt.Errorf("failed embeddings for item %q: %v", itemID, err)
+		return fmt.Errorf("failed to generate embeddings for item %q: %v", itemID, err)
 	}
 
 	if exists {
@@ -67,7 +67,7 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 			Embedding: &embeddingValue,
 		})
 		if err != nil {
-			return fmt.Errorf("failed synching embeddings for item %s: %v", itemID, err)
+			return fmt.Errorf("failed to sync embeddings for item %s: %v", itemID, err)
 		}
 	} else {
 		_, err = h.Repo.CreateItemEmbedding(ctx, repository.CreateItemEmbeddingParams{
@@ -75,7 +75,7 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 			Embedding: &embeddingValue,
 		})
 		if err != nil {
-			return fmt.Errorf("failed synching embeddings for item %s: %v", itemID, err)
+			return fmt.Errorf("failed to sync embeddings for item %s: %v", itemID, err)
 		}
 	}
 	log.Printf(
