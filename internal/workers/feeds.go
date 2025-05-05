@@ -15,6 +15,10 @@ import (
 )
 
 func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
+	prefix := fmt.Sprintf(
+		"task %s -",
+		t.ResultWriter().TaskID(),
+	)
 	var p SyncFeedPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v", asynq.SkipRetry)
@@ -23,23 +27,22 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 
 	data, err := h.Repo.GetFeedByID(ctx, feedID)
 	if err != nil {
-		return fmt.Errorf("failed to feed %q: %v", feedID, err)
+		return fmt.Errorf("failed to get feed %q: %v", feedID, err)
 	}
 
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(data.FeedLink)
 	if err != nil {
-		return fmt.Errorf("failed parsing feed %q: %v", feedID, err)
+		return fmt.Errorf("failed to parse feed %q: %v", feedID, err)
 	}
 
 	lastItem, err := h.Repo.GetLastItem(ctx, feedID)
 	var itemsToSync []*gofeed.Item
-	// TODO: revisit this
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			itemsToSync = feed.Items
 		} else {
-			return fmt.Errorf("failed fetching last item for feed %q: %v", feedID, err)
+			return fmt.Errorf("failed to fetch last item from feed %q: %v", feedID, err)
 		}
 	} else {
 		cutoff := *lastItem.PublishedParsed
@@ -50,7 +53,7 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 		}
 	}
 
-	log.Printf("task %s - %d items to sync", t.ResultWriter().TaskID(), len(itemsToSync))
+	log.Printf("%s %d items to sync for feed %q", prefix, len(itemsToSync), feedID)
 
 	for _, itm := range itemsToSync {
 		content := &itm.Content
@@ -75,17 +78,17 @@ func (h *Handler) HandleFeedSync(ctx context.Context, t *asynq.Task) error {
 			Enclosures:      typeext.Enclosures(itm.Enclosures),
 		})
 		if err != nil {
-			return fmt.Errorf("failed creating item %q for feed %q: %v", itm.GUID, feedID, err)
+			return fmt.Errorf("failed to create item %q for feed %q: %v", itm.GUID, feedID, err)
 		}
-		log.Printf("synced item %s from feed %s", itm.GUID, feedID)
+		log.Printf("%s synced item %s from feed %s", prefix, itm.GUID, feedID)
 		task, _ := NewEmbedItemTask(r.ID)
 		tResp, err := h.Client.Enqueue(task, asynq.Queue("default"))
 		if err != nil {
 			return fmt.Errorf("failed to queue embedding task for item %s", r.ID)
 		}
 		log.Printf(
-			"task %s - queued embdding task %s for item %s ",
-			t.ResultWriter().TaskID(), r.ID, tResp.ID,
+			"%s queued embdding task %s for item %s ",
+			prefix, r.ID, tResp.ID,
 		)
 	}
 

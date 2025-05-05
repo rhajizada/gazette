@@ -14,6 +14,10 @@ import (
 )
 
 func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
+	prefix := fmt.Sprintf(
+		"task %s -",
+		t.ResultWriter().TaskID(),
+	)
 	var p EmbedItemPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v", asynq.SkipRetry)
@@ -34,6 +38,9 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 	if len(*item.Content) > len(*item.Description) {
 		toEmbed = item.Content
 	}
+	if len(*item.Title) > len(*toEmbed) {
+		toEmbed = item.Title
+	}
 
 	extracted := ExtractTextFromHTML(*toEmbed)
 
@@ -47,8 +54,8 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 		return fmt.Errorf("failed to generate embedding for item %s: %v", itemID, err)
 	}
 	log.Printf(
-		"task %s - generated embddings for item %s ",
-		t.ResultWriter().TaskID(), itemID,
+		"%s generated embddings for item %s ",
+		prefix, itemID,
 	)
 
 	embeddingValue := vectorFromFloat64s(resp.Embedding)
@@ -79,8 +86,8 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 		}
 	}
 	log.Printf(
-		"task %s - synced embddings for item %s ",
-		t.ResultWriter().TaskID(), itemID,
+		"%s synced embddings for item %s ",
+		prefix, itemID,
 	)
 
 	return nil

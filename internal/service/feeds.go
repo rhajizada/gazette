@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -139,7 +140,10 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 	}
 
 	task, _ := workers.NewSyncFeedTask(feed.ID)
-	s.Client.Enqueue(task, asynq.Queue("critical"))
+	_, err = s.Client.Enqueue(task, asynq.Queue("critical"))
+	if err != nil {
+		log.Printf("failed to queue sync task fo feed %s: %v", feed.ID, err)
+	}
 
 	sub, err := s.Repo.CreateUserFeedSubscription(ctx, repository.CreateUserFeedSubscriptionParams{UserID: r.UserID, FeedID: feed.ID})
 	if err != nil {
