@@ -62,10 +62,12 @@ export default function FeedDetails() {
         if (err.status === 404 || err.status === 400) {
           setNotFound(true);
         } else {
-          const message = err.text();
-          toast.error(message || "failed to load feed");
-          setError("Failed to load feed");
           if (err.error === "Unauthorized") logout();
+          else {
+            const message = err.text();
+            toast.error(message || "failed to load feed");
+            setError("Failed to load feed");
+          }
         }
       })
       .finally(() => setLoading(false));

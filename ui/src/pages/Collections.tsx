@@ -91,8 +91,11 @@ export default function Collections() {
       setNewName("");
       toast.success("collection created");
     } catch (err: any) {
-      const message = await err.text();
-      toast.error(message || "failed to create collection");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to create collection");
+      }
     } finally {
       setCreating(false);
     }
@@ -104,8 +107,11 @@ export default function Collections() {
       setCollections((prev) => prev.filter((c) => c.id !== id));
       toast.success("collection deleted");
     } catch (err: any) {
-      const message = await err.text();
-      toast.error(message || "failed to delete collection");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to delete collection");
+      }
     }
   };
 

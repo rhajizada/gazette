@@ -14,7 +14,7 @@ interface ItemPreviewProps {
 }
 
 export function ItemPreview({ item }: ItemPreviewProps) {
-  const { api } = useAuth();
+  const { api, logout } = useAuth();
   const navigate = useNavigate();
   const [liked, setLiked] = useState<boolean>(item.liked ?? false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -35,8 +35,11 @@ export function ItemPreview({ item }: ItemPreviewProps) {
         liked ? "removed from liked items" : "added to liked items",
       );
     } catch (err: any) {
-      const message = await err.text();
-      toast.error(message || "failed to like item");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to like item");
+      }
     } finally {
       setLoading(false);
     }

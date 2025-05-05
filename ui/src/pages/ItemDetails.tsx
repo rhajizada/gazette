@@ -66,13 +66,13 @@ export default function ItemDetails() {
         setLiked(res.data.liked ?? false);
       })
       .catch((err) => {
+        if (err.error === "Unauthorized") logout();
         if (err.status === 404 || err.status === 400) {
           setNotFound(true);
         } else {
           const message = err.text();
           toast.error(message || "failed to load item");
           setError("failed to load item");
-          if (err.error === "Unauthorized") logout();
         }
       })
       .finally(() => setLoading(false));
@@ -119,8 +119,11 @@ export default function ItemDetails() {
         ...Object.fromEntries(myCols.map((c) => [c.id!, true])),
       }));
     } catch (err: any) {
-      const message = err.text();
-      toast.error(message || "failed to load collections");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = err.text();
+        toast.error(message || "failed to load collections");
+      }
     } finally {
       setCollectionsLoading(false);
     }
@@ -153,8 +156,11 @@ export default function ItemDetails() {
         liked ? "removed from liked items" : "added to liked items",
       );
     } catch (err: any) {
-      const message = await err.text();
-      toast.error(message || "failed to update item");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to update item");
+      }
     } finally {
       setLikeLoading(false);
     }
@@ -178,8 +184,11 @@ export default function ItemDetails() {
           : `added to collection ${colName}`,
       );
     } catch (err: any) {
-      const message = await err.text();
-      toast.error(message || "failed to update collection");
+      if (err.error === "Unauthorized") logout();
+      else {
+        const message = await err.text();
+        toast.error(message || "failed to update collection");
+      }
     }
   };
 
