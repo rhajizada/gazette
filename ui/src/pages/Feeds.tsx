@@ -116,7 +116,11 @@ export default function Feeds() {
   };
 
   const processed = allFeeds
-    .filter((f) => f.title?.toLowerCase().includes(search.toLowerCase()))
+    .filter(
+      (it) =>
+        it.title?.toLowerCase().includes(search.toLowerCase()) ||
+        it.description?.toLowerCase().includes(search.toLowerCase()),
+    )
     .sort((a, b) => {
       let cmp: number;
       if (sortKey === "title") {
