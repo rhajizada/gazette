@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -27,19 +28,27 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.Service.ListCollections(r.Context(),
+	var resp *service.ListCollectionsResponse
+
+	resp, err = h.Service.ListCollections(r.Context(),
 		repository.ListCollectionsByUserParams{
 			UserID: userID,
 			Limit:  params.Limit,
 			Offset: params.Offset,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed listing collections: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, "failed to list collections", http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -48,20 +57,20 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 
 // CreateCollection creates a new collection.
 // @Summary      Create collection
-// @Description  Creates a named collection for the current user.
-// @Tags         Collections
+// @Description  Creates a named collection for the current user.FeedURL@Tags         Collections
 // @Param        body    body      CreateCollectionRequest  true  "Collection name"
 // @Success      200     {object}  service.Collection
 // @Failure      400     {object}  string
+// @Failure      409     {object}  string
 // @Failure      500     {object}  string
 // @Security     BearerAuth
-// @Router       /api/collections/ [post]
+// @Router       /api/collections [post]
 func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 
 	var req CreateCollectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("bad JSON: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	query := repository.CreateCollectionParams{
@@ -71,8 +80,14 @@ func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
 
 	col, err := h.Service.CreateCollection(r.Context(), query)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed creating collection: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to create collection %s", req.Name), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -91,16 +106,23 @@ func (h *Handler) CreateCollection(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /api/collections/{collectionID} [get]
 func (h *Handler) GetCollectionByID(w http.ResponseWriter, r *http.Request) {
-	colID, err := uuid.Parse(r.PathValue("collectionID"))
+	path := r.PathValue("collectionID")
+	colID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid collection ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 
-	col, err := h.Service.GetCollection(r.Context(), colID)
+	col, err := h.Service.GetCollectionByID(r.Context(), colID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed fetching collection: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to fetch collection %s", colID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -114,19 +136,28 @@ func (h *Handler) GetCollectionByID(w http.ResponseWriter, r *http.Request) {
 // @Param        collectionID  path  string  true  "Collection UUID"
 // @Success      204  "No Content"
 // @Failure      400  {object}  string
+// @Failure      404  {object}  string
 // @Failure      500  {object}  string
 // @Security     BearerAuth
 // @Router       /api/collections/{collectionID} [delete]
 func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
-	colID, err := uuid.Parse(r.PathValue("collectionID"))
+	path := r.PathValue("collectionID")
+	colID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid collection ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("bad input: %s", path), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.DeleteCollection(r.Context(), colID); err != nil {
-		http.Error(w, fmt.Sprintf("failed deleting collection: %v", err), http.StatusInternalServerError)
-		return
+	err = h.Service.DeleteCollection(r.Context(), colID)
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to delete collection %s", colID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -144,17 +175,18 @@ func (h *Handler) DeleteCollectionByID(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /api/collections/{collectionID}/item/{itemID} [post]
 func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
-	colID, err := uuid.Parse(r.PathValue("collectionID"))
+	colPath := r.PathValue("collectionID")
+	colID, err := uuid.Parse(colPath)
 	if err != nil {
-		http.Error(w, "invalid collection ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", colPath), http.StatusBadRequest)
 		return
 	}
-	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	itemPath := r.PathValue("itemID")
+	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("updating %s %s", colID, itemID)
 
 	resp, err := h.Service.AddItemToCollection(r.Context(),
 		repository.AddItemToCollectionParams{
@@ -162,8 +194,14 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 			ItemID:       itemID,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed adding item: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to add item %s to collection %s", itemID, colID), http.StatusBadRequest)
+			return
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
@@ -181,24 +219,33 @@ func (h *Handler) AddItemToCollection(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /api/collections/{collectionID}/item/{itemID} [delete]
 func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Request) {
-	colID, err := uuid.Parse(r.PathValue("collectionID"))
+	colPath := r.PathValue("collectionID")
+	colID, err := uuid.Parse(colPath)
 	if err != nil {
-		http.Error(w, "invalid collection ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", colPath), http.StatusBadRequest)
 		return
 	}
-	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	itemPath := r.PathValue("itemID")
+	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.RemoveItemFromCollection(r.Context(),
+	err = h.Service.RemoveItemFromCollection(r.Context(),
 		repository.RemoveItemFromCollectionParams{
 			CollectionID: colID,
 			ItemID:       itemID,
-		}); err != nil {
-		http.Error(w, fmt.Sprintf("failed removing item: %v", err), http.StatusInternalServerError)
-		return
+		})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to remove item %s from collection %s", itemID, colID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -218,18 +265,21 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 // @Router       /api/collections/{collectionID}/items [get]
 func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	colID, err := uuid.Parse(r.PathValue("collectionID"))
+	colPath := r.PathValue("collectionID")
+	colID, err := uuid.Parse(colPath)
 	if err != nil {
-		http.Error(w, "invalid collection ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", colPath), http.StatusBadRequest)
 		return
 	}
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.Service.ListCollectionItems(r.Context(), service.ListCollectionItemsRequest{
+	var resp *service.ListCollectionItemsResponse
+
+	resp, err = h.Service.ListCollectionItems(r.Context(), service.ListCollectionItemsRequest{
 		UserID: userID,
 		ListItemsInCollectionParams: repository.ListItemsInCollectionParams{
 			CollectionID: colID,
@@ -238,8 +288,14 @@ func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request
 		},
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed listing items: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to list items in collection %s", colID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

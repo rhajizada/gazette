@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,7 +30,7 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -42,15 +41,22 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp, err := h.Service.ListFeeds(r.Context(), service.ListFeedsRequest{
+	var resp *service.ListFeedsResponse
+	resp, err = h.Service.ListFeeds(r.Context(), service.ListFeedsRequest{
 		UserID:       userID,
 		SubscbedOnly: subOnly,
 		Limit:        params.Limit,
 		Offset:       params.Offset,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed listing feeds: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, "failed to list feeds", http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -73,7 +79,7 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 
 	var req CreateFeedRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("bad JSON: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -84,8 +90,14 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 
 	feed, err := h.Service.CreateFeed(r.Context(), query)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed creating feed: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to create feed %s", req.FeedURL), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -105,9 +117,10 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/feeds/{feedID} [get]
 func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	feedID, err := uuid.Parse(r.PathValue("feedID"))
+	path := r.PathValue("feedID")
+	feedID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid feed ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 
@@ -117,12 +130,14 @@ func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 	}
 	feed, err := h.Service.GetFeed(r.Context(), req)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "feed not found", http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed fetching feed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to fetch feed %s", feedID), http.StatusBadRequest)
+			return
 		}
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -140,15 +155,23 @@ func (h *Handler) GetFeedByID(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /api/feeds/{feedID} [delete]
 func (h *Handler) DeleteFeedByID(w http.ResponseWriter, r *http.Request) {
-	feedID, err := uuid.Parse(r.PathValue("feedID"))
+	path := r.PathValue("feedID")
+	feedID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid feed ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.DeleteFeed(r.Context(), service.DeleteFeedRequest{FeedID: feedID}); err != nil {
-		http.Error(w, fmt.Sprintf("failed deleting feed: %v", err), http.StatusInternalServerError)
-		return
+	err = h.Service.DeleteFeed(r.Context(), service.DeleteFeedRequest{FeedID: feedID})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to delete feed %s", feedID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -161,15 +184,15 @@ func (h *Handler) DeleteFeedByID(w http.ResponseWriter, r *http.Request) {
 // @Param        feedID  path      string  true  "Feed UUID"
 // @Success      200     {object}  service.SubscibeToFeedResponse
 // @Failure      400     {object}  string
-// @Failure      409     {object}  string
 // @Failure      500     {object}  string
 // @Security     BearerAuth
 // @Router       /api/feeds/{feedID}/subscribe [put]
 func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	feedID, err := uuid.Parse(r.PathValue("feedID"))
+	path := r.PathValue("feedID")
+	feedID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid feed ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 
@@ -179,8 +202,14 @@ func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 			FeedID: feedID,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed subscribing: %v", err), http.StatusConflict)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to subscribe to feed %s", feedID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -199,19 +228,27 @@ func (h *Handler) SubscribeToFeed(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/feeds/{feedID}/subscribe [delete]
 func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	feedID, err := uuid.Parse(r.PathValue("feedID"))
+	path := r.PathValue("feedID")
+	feedID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid feed ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.UnsubscribeFromFeed(r.Context(),
+	err = h.Service.UnsubscribeFromFeed(r.Context(),
 		repository.DeleteUserFeedSubscriptionParams{
 			UserID: userID,
 			FeedID: feedID,
-		}); err != nil {
-		http.Error(w, fmt.Sprintf("failed unsubscribing: %v", err), http.StatusInternalServerError)
-		return
+		})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to unsubscribe from feed %s", feedID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -231,18 +268,21 @@ func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/feeds/{feedID}/items [get]
 func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	feedID, err := uuid.Parse(r.PathValue("feedID"))
+	path := r.PathValue("feedID")
+	feedID, err := uuid.Parse(path)
 	if err != nil {
-		http.Error(w, "invalid feed ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", path), http.StatusBadRequest)
 		return
 	}
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.Service.ListItemsByFeedID(r.Context(),
+	var resp *service.ListItemsResponse
+
+	resp, err = h.Service.ListItemsByFeedID(r.Context(),
 		repository.ListItemsByFeedIDForUserParams{
 			FeedID: feedID,
 			UserID: userID,
@@ -250,8 +290,14 @@ func (h *Handler) ListItemsByFeedID(w http.ResponseWriter, r *http.Request) {
 			Offset: params.Offset,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed listing items: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to list items in feed %s", feedID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

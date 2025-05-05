@@ -177,6 +177,21 @@ definitions:
       subscribed_at:
         type: string
     type: object
+  github_com_rhajizada_gazette_internal_service.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      lastUpdatedAt:
+        type: string
+      name:
+        type: string
+      sub:
+        type: string
+    type: object
   internal_handler.CreateCollectionRequest:
     properties:
       name:
@@ -228,9 +243,8 @@ paths:
       summary: List collections
       tags:
       - Collections
-  /api/collections/:
     post:
-      description: Creates a named collection for the current user.
+      description: Creates a named collection for the current user.FeedURL@Tags         Collections
       parameters:
       - description: Collection name
         in: body
@@ -247,6 +261,10 @@ paths:
           description: Bad Request
           schema:
             type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
         "500":
           description: Internal Server Error
           schema:
@@ -254,8 +272,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Create collection
-      tags:
-      - Collections
   /api/collections/{collectionID}:
     delete:
       description: Deletes a collection by ID.
@@ -270,6 +286,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
           schema:
             type: string
         "500":
@@ -610,10 +630,6 @@ paths:
           description: Bad Request
           schema:
             type: string
-        "409":
-          description: Conflict
-          schema:
-            type: string
         "500":
           description: Internal Server Error
           schema:
@@ -686,6 +702,43 @@ paths:
       summary: Get item
       tags:
       - Items
+  /api/items/{itemID}/collections:
+    get:
+      description: Retrieves list of collections that given item is in.
+      parameters:
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get collections item is in.
+      tags:
+      - Items
   /api/items/{itemID}/like:
     delete:
       description: Deletes the like record for the current user on an item.
@@ -728,10 +781,6 @@ paths:
           description: Bad Request
           schema:
             type: string
-        "409":
-          description: Conflict
-          schema:
-            type: string
         "500":
           description: Internal Server Error
           schema:
@@ -741,6 +790,31 @@ paths:
       summary: Like item
       tags:
       - Items
+  /api/user:
+    get:
+      description: Retrieves currently logged in user.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.User'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user
+      tags:
+      - Users
 securityDefinitions:
   BearerAuth:
     in: header

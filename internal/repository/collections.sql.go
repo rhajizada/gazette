@@ -11,6 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
+const countCollectionsByItemID = `-- name: CountCollectionsByItemID :one
+SELECT
+  COUNT(*) AS count
+FROM collection_items ci
+JOIN collections c
+  ON ci.collection_id = c.id
+WHERE
+  ci.item_id = $1
+  AND c.user_id = $2
+`
+
+type CountCollectionsByItemIDParams struct {
+	ItemID uuid.UUID `json:"itemId"`
+	UserID uuid.UUID `json:"userId"`
+}
+
+func (q *Queries) CountCollectionsByItemID(ctx context.Context, arg CountCollectionsByItemIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCollectionsByItemID, arg.ItemID, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countCollectionsByUserID = `-- name: CountCollectionsByUserID :one
 SELECT COUNT(*) AS count
 FROM collections
@@ -75,6 +98,63 @@ func (q *Queries) GetCollectionByID(ctx context.Context, id uuid.UUID) (Collecti
 		&i.LastUpdated,
 	)
 	return i, err
+}
+
+const listCollectionsByItemID = `-- name: ListCollectionsByItemID :many
+SELECT
+  c.id,
+  c.user_id,
+  c.name,
+  c.created_at,
+  c.last_updated
+FROM collections c
+JOIN collection_items ci
+  ON ci.collection_id = c.id
+WHERE
+  ci.item_id = $1
+  AND c.user_id = $2
+ORDER BY
+  ci.added_at DESC
+LIMIT  $3
+OFFSET $4
+`
+
+type ListCollectionsByItemIDParams struct {
+	ItemID uuid.UUID `json:"itemId"`
+	UserID uuid.UUID `json:"userId"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListCollectionsByItemID(ctx context.Context, arg ListCollectionsByItemIDParams) ([]Collection, error) {
+	rows, err := q.db.Query(ctx, listCollectionsByItemID,
+		arg.ItemID,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Collection
+	for rows.Next() {
+		var i Collection
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.LastUpdated,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCollectionsByUser = `-- name: ListCollectionsByUser :many

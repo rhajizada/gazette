@@ -1,4 +1,4 @@
-package tasks
+package workers
 
 import (
 	"context"
@@ -12,9 +12,13 @@ import (
 )
 
 func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
+	prefix := fmt.Sprintf(
+		"task %s -",
+		t.ResultWriter().TaskID(),
+	)
 	count, err := h.Repo.CountFeeds(ctx)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("failed listing feeds: %v", err)
+		return fmt.Errorf("failed to count feeds: %v", err)
 	}
 	if count == 0 {
 		return nil
@@ -26,14 +30,12 @@ func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
 			limit = int(remaining)
 		}
 
-		// ListFeedsByID should be your SQLC-generated method:
-		// func (q *Queries) ListFeeds(ctx context.Context, limit, offset int64) ([]Feed, error)
 		feeds, err := h.Repo.ListFeeds(ctx, repository.ListFeedsParams{
 			Limit:  int32(limit),
 			Offset: int32(offset),
 		})
 		if err != nil {
-			return fmt.Errorf("failed listing feeds (offset %d): %v", offset, err)
+			return fmt.Errorf("failed to list feeds: %v", err)
 		}
 
 		for _, feed := range feeds {
@@ -42,11 +44,11 @@ func (h *Handler) HandleDataSync(ctx context.Context, t *asynq.Task) error {
 				return err
 			}
 
-			ti, err := h.Client.Enqueue(task)
+			ti, err := h.Client.Enqueue(task, asynq.Queue("critical"))
 			if err != nil {
 				return err
 			}
-			log.Printf("queued sync task %s for feed %s", ti.ID, feed.ID)
+			log.Printf("%s queued sync task %s for feed %s", prefix, ti.ID, feed.ID)
 
 		}
 

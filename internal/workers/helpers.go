@@ -1,4 +1,4 @@
-package tasks
+package workers
 
 import "github.com/pgvector/pgvector-go"
 

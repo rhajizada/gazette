@@ -15,12 +15,28 @@ services:
     ports:
       - "6379:6379"
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  ollama-init:
+    image: alpine/curl
+    depends_on:
+      - ollama
+    entrypoint: >
+      sh -c "curl -s http://ollama:11434/api/pull -d '{\"model\": \"nomic-embed-text:latest\"}'"
+    restart: "no"
+
   server:
     build:
       context: .
       dockerfile: docker/server/Dockerfile
       args:
         VERSION: "${GAZETTE_VERSION:-dev}"
+    restart: unless-stopped
     environment:
       GAZETTE_PORT: ${GAZETTE_PORT}
       GAZETTE_SECRET_KEY: ${GAZETTE_SECRET_KEY}
@@ -45,17 +61,19 @@ services:
       dockerfile: docker/worker/Dockerfile
       args:
         VERSION: "${GAZETTE_VERSION:-dev}"
+    restart: unless-stopped
     environment:
       GAZETTE_POSTGRES_HOST: "postgres"
       GAZETTE_POSTGRES_USER: ${GAZETTE_POSTGRES_USER}
       GAZETTE_POSTGRES_PASSWORD: ${GAZETTE_POSTGRES_PASSWORD}
       GAZETTE_POSTGRES_DBNAME: "gazette"
       GAZETTE_REDIS_ADDR: "redis:6379"
-      GAZETTE_OLLAMA_URL: "http://host.docker.internal:11434"
+      GAZETTE_OLLAMA_URL: "http://ollama:11434"
       GAZETTE_OLLAMA_EMBEDDINGS_MODEL: nomic-embed-text:latest
     depends_on:
       - postgres
       - redis
+      - ollama-init
 
   scheduler:
     build:
@@ -63,6 +81,7 @@ services:
       dockerfile: docker/scheduler/Dockerfile
       args:
         VERSION: "${GAZETTE_VERSION:-dev}"
+    restart: unless-stopped
     environment:
       GAZETTE_REDIS_ADDR: "redis:6379"
     depends_on:

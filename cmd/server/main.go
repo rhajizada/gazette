@@ -91,20 +91,16 @@ func main() {
 	handler := handler.New(service, []byte(cfg.SecretKey), verifier, oauthCfg)
 
 	mux := http.NewServeMux()
-	feedsAPIRoutes := router.RegisterFeedsAPI(handler)
-	itemsAPIRoutes := router.RegisterItemsAPI(handler)
-	collectionsAPIRoutes := router.RegisterCollectionsAPI(handler)
+	apiRoutes := router.RegisterAPI(handler)
 	oauthRoutes := router.RegisterOAuthRoutes(handler)
 
 	loggingMiddleware := middleware.Logging()
 	authMiddleware := middleware.APIAuthMiddleware([]byte(cfg.SecretKey))
 
-	mux.Handle("/api/feeds/", http.StripPrefix("/api", authMiddleware(feedsAPIRoutes)))
-	mux.Handle("/api/collections/", http.StripPrefix("/api", authMiddleware(collectionsAPIRoutes)))
-	mux.Handle("/api/items/", http.StripPrefix("/api", authMiddleware(itemsAPIRoutes)))
+	mux.Handle("/api/", http.StripPrefix("/api", authMiddleware(apiRoutes)))
 	mux.Handle("/api/docs/", httpSwagger.WrapHandler)
 	mux.Handle("/oauth/", http.StripPrefix("/oauth", oauthRoutes))
-	mux.Handle("/", http.HandlerFunc(handler.IndexHandler))
+	mux.Handle("/", http.HandlerFunc(handler.WebHandler))
 
 	log.Printf("server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)

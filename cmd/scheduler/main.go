@@ -9,7 +9,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/rhajizada/gazette/internal/config"
 	"github.com/rhajizada/gazette/internal/database"
-	"github.com/rhajizada/gazette/internal/tasks"
+	"github.com/rhajizada/gazette/internal/workers"
 )
 
 var Version = "dev"
@@ -38,11 +38,11 @@ func main() {
 		log.Panicf("failed to initialze scheduler: %v", err)
 	}
 
-	dataSyncTask, _ := tasks.NewSyncDataTask()
+	dataSyncTask, _ := workers.NewSyncDataTask()
 
-	id, err := scheduler.Register("@every 30m", dataSyncTask)
+	id, err := scheduler.Register("@every 30m", dataSyncTask, asynq.Queue("critical"))
 	if err != nil {
-		log.Panicf("failed scheduling data sync task: %v", err)
+		log.Panicf("failed to schedule data sync task: %v", err)
 	}
 	log.Printf("scheduled data sync task %s", id)
 

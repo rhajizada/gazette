@@ -37,6 +37,25 @@ tasks:
          .
     dir: ./
 
+  push-image:
+    desc: Push Docker image for the given app
+    deps:
+      - build-image
+    vars:
+      app: '{{.app | default "server"}}'
+      tag: '{{.tag | default "latest"}}'
+    requires:
+      vars:
+        - DOCKER_REGISTRY_URL
+    preconditions:
+      - sh: '[ "{{.app}}" = "server" ] || [ "{{.app}}" = "worker" ] || [ "{{.app}}" = "scheduler" ]'
+        msg: "❌ Error: invalid app '{{.app}}', valid options are server, worker, or scheduler."
+    cmds:
+      - |
+        docker tag {{.name}}-{{.app}} {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
+        docker push {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
+    dir: ./
+
   compose:
     desc: Docker compose
     vars:
@@ -54,4 +73,5 @@ tasks:
     cmds:
       - |
         swag init --parseInternal --parseDependency -g cmd/server/main.go
+        npx swagger-typescript-api generate -p ./docs/swagger.json -o ./ui/src/api --modular
     dir: ./

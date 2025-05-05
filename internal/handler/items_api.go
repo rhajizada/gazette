@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,19 +28,26 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 
 	params, err := getPageParams(r.URL.Query())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("invalid paging: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.Service.ListUserLikedItems(r.Context(),
+	var resp *service.ListItemsResponse
+	resp, err = h.Service.ListUserLikedItems(r.Context(),
 		repository.ListUserLikedItemsParams{
 			UserID: userID,
 			Limit:  params.Limit,
 			Offset: params.Offset,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed listing liked items: %v", err), http.StatusInternalServerError)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, "failed to list liked items", http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -61,20 +67,23 @@ func (h *Handler) ListUserLikedItems(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/items/{itemID} [get]
 func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	itemPath := r.PathValue("itemID")
+	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
 	item, err := h.Service.GetItem(r.Context(), service.GetItemRequest{UserID: userID, ItemID: itemID})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "item not found", http.StatusNotFound)
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
 		} else {
-			http.Error(w, fmt.Sprintf("failed fetching item: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to fetch item %s", itemID), http.StatusBadRequest)
+			return
 		}
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -88,15 +97,15 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 // @Param        itemID  path      string  true  "Item UUID"
 // @Success      200     {object}  service.LikeItemResponse
 // @Failure      400     {object}  string
-// @Failure      409     {object}  string
 // @Failure      500     {object}  string
 // @Security     BearerAuth
 // @Router       /api/items/{itemID}/like [post]
 func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	itemPath := r.PathValue("itemID")
+	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
@@ -106,8 +115,14 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 			ItemID: itemID,
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to like item: %v", err), http.StatusConflict)
-		return
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to like item %s", itemID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -126,20 +141,78 @@ func (h *Handler) LikeItem(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/items/{itemID}/like [delete]
 func (h *Handler) UnlikeItem(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
-	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	itemPath := r.PathValue("itemID")
+	itemID, err := uuid.Parse(itemPath)
 	if err != nil {
-		http.Error(w, "invalid item ID", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.UnlikeItem(r.Context(),
+	err = h.Service.UnlikeItem(r.Context(),
 		repository.DeleteUserLikeParams{
 			UserID: userID,
 			ItemID: itemID,
-		}); err != nil {
-		http.Error(w, fmt.Sprintf("failed to unlike item: %v", err), http.StatusInternalServerError)
-		return
+		})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to like item %s", itemID), http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListItemCollections returns list of collections that item is in.
+// @Summary      Get collections item is in.
+// @Description  Retrieves list of collections that given item is in.
+// @Tags         Items
+// @Param        itemID  path      string  true  "Item UUID"
+// @Param        limit   query     int32  true   "Max number of items"
+// @Param        offset  query     int32  true   "Number of items to skip"
+// @Success      200     {object}  service.ListCollectionsResponse
+// @Failure      400     {object}  string
+// @Failure      500     {object}  string
+// @Security     BearerAuth
+// @Router       /api/items/{itemID}/collections [get]
+func (h *Handler) ListItemCollections(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserClaims(r).UserID
+	itemID, err := uuid.Parse(r.PathValue("itemID"))
+	if err != nil {
+		http.Error(w, "%s is not a valid id", http.StatusBadRequest)
+		return
+	}
+
+	params, err := getPageParams(r.URL.Query())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var resp *service.ListCollectionsResponse
+
+	resp, err = h.Service.ListItemCollections(r.Context(),
+		repository.ListCollectionsByItemIDParams{
+			UserID: userID,
+			ItemID: itemID,
+			Limit:  params.Limit,
+			Offset: params.Offset,
+		})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to list collections with item %s", itemID), http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
