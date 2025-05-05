@@ -27,9 +27,6 @@ import type {
 } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
 
-const MIN_WIDTH = 100;
-const MIN_HEIGHT = 100;
-
 export default function ItemDetails() {
   const { itemID } = useParams<{ itemID: string }>();
   const { api, logout } = useAuth();
@@ -47,7 +44,6 @@ export default function ItemDetails() {
   const [included, setIncluded] = useState<Record<string, boolean>>({});
   const [collectionsLoading, setCollectionsLoading] = useState(false);
 
-  const [showImage, setShowImage] = useState(false);
   const [open, setOpen] = useState(false);
 
   const getColor = (id: string) => {
@@ -81,17 +77,6 @@ export default function ItemDetails() {
       })
       .finally(() => setLoading(false));
   }, [api, itemID, logout]);
-
-  useEffect(() => {
-    if (!item?.image?.url) return;
-    const img = new Image();
-    img.src = item.image.url;
-    img.onload = () => {
-      if (img.naturalWidth > MIN_WIDTH && img.naturalHeight > MIN_HEIGHT) {
-        setShowImage(true);
-      }
-    };
-  }, [item?.image?.url]);
 
   // fetch collections logic
   const fetchCollections = useCallback(async () => {
@@ -251,20 +236,6 @@ export default function ItemDetails() {
               new Date(item.updated_parsed).toLocaleString()}
           </p>
           <br />
-          {showImage && (
-            <img
-              src={item.image.url}
-              alt={item.image.title ?? item.title}
-              className="
-            float-left
-            mr-6
-            mb-6
-            rounded-lg
-            max-w-[33.333%]
-            h-auto
-          "
-            />
-          )}
           {item.content && (
             <div
               className="mt-6 leading-7 max-w-prose mx-auto"
