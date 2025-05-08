@@ -75,6 +75,9 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Creates a named collection for the current user.FeedURL@Tags         Collections",
+                "tags": [
+                    "Collections"
+                ],
                 "summary": "Create collection",
                 "parameters": [
                     {
@@ -452,6 +455,51 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/feeds/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a CSV list of all feeds, or only those the user is subscribed to.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "Feeds"
+                ],
+                "summary": "Export feeds",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Only subscribed feeds",
+                        "name": "subscribedOnly",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file with one column: Feed URL",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "string"
                         }
