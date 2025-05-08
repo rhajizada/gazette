@@ -95,6 +95,16 @@ ORDER BY f.created_at DESC
 LIMIT  $3
 OFFSET $4;
 
+-- name: ExportFeedsByUserID :many
+SELECT
+  f.feed_link
+FROM feeds f
+LEFT JOIN user_feeds uf
+  ON uf.feed_id = f.id
+  AND uf.user_id = $1
+WHERE
+  (NOT $2) OR (uf.user_id IS NOT NULL)
+ORDER BY f.created_at DESC;
 
 -- name: GetUserFeedByID :one
 SELECT

@@ -61,6 +61,7 @@ export class Api<
   /**
    * @description Creates a named collection for the current user.FeedURL@Tags         Collections
    *
+   * @tags Collections
    * @name CollectionsCreate
    * @summary Create collection
    * @request POST:/api/collections
@@ -231,6 +232,29 @@ export class Api<
       body: body,
       secure: true,
       type: ContentType.Json,
+      ...params,
+    });
+  /**
+   * @description Returns a CSV list of all feeds, or only those the user is subscribed to.
+   *
+   * @tags Feeds
+   * @name FeedsExportList
+   * @summary Export feeds
+   * @request GET:/api/feeds/export
+   * @secure
+   */
+  feedsExportList = (
+    query?: {
+      /** Only subscribed feeds */
+      subscribedOnly?: boolean;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<File, string>({
+      path: `/api/feeds/export`,
+      method: "GET",
+      query: query,
+      secure: true,
       ...params,
     });
   /**

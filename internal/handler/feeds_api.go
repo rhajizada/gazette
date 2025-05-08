@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,6 +62,72 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+// ExportFeeds returns a CSV file containing the list of feed URLs.
+// @Summary      Export feeds
+// @Description  Returns a CSV list of all feeds, or only those the user is subscribed to.
+// @Tags         Feeds
+// @Produce      text/csv
+// @Param        subscribedOnly  query     bool    false  "Only subscribed feeds"
+// @Success      200             {file}   file    "List of feeds"
+// @Failure      400             {object}  string
+// @Failure      500             {object}  string
+// @Security     BearerAuth
+// @Router       /api/feeds/export [get]
+func (h *Handler) ExportFeeds(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserClaims(r).UserID
+
+	subOnly := false
+	if v := r.URL.Query().Get("subscribedOnly"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			subOnly = b
+		}
+	}
+
+	var feeds []string
+	var err error
+	feeds, err = h.Service.ExportFeeds(r.Context(), service.ExportFeedsRequest{
+		UserID:       userID,
+		SubscbedOnly: subOnly,
+	})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, "failed to export feeds", http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Disposition", `attachment; filename="feeds.csv"`)
+
+	csvWriter := csv.NewWriter(w)
+	defer csvWriter.Flush()
+
+	headerRow := []string{"Feed URL"}
+	err = csvWriter.Write(headerRow)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to write header: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	for _, feed := range feeds {
+		record := []string{feed}
+		err := csvWriter.Write(record)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to write record: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	err = csvWriter.Error()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to flush writer: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 // CreateFeed subscribes the user to a feed, creating it if necessary.

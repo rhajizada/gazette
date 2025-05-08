@@ -58,6 +58,7 @@ func (h *Handler) ListCollections(w http.ResponseWriter, r *http.Request) {
 // CreateCollection creates a new collection.
 // @Summary      Create collection
 // @Description  Creates a named collection for the current user.FeedURL@Tags         Collections
+// @Tags         Collections
 // @Param        body    body      CreateCollectionRequest  true  "Collection name"
 // @Success      200     {object}  service.Collection
 // @Failure      400     {object}  string

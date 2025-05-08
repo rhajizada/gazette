@@ -38,6 +38,7 @@ type Querier interface {
 	DeleteUserEmbedding(ctx context.Context, userID uuid.UUID) error
 	DeleteUserFeedSubscription(ctx context.Context, arg DeleteUserFeedSubscriptionParams) error
 	DeleteUserLike(ctx context.Context, arg DeleteUserLikeParams) error
+	ExportFeedsByUserID(ctx context.Context, arg ExportFeedsByUserIDParams) ([]string, error)
 	GetCollectionByID(ctx context.Context, id uuid.UUID) (Collection, error)
 	GetCollectionEmbeddingByID(ctx context.Context, collectionID uuid.UUID) (CollectionEmbedding, error)
 	GetCollectionItem(ctx context.Context, arg GetCollectionItemParams) (CollectionItem, error)

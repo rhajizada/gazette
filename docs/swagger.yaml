@@ -272,6 +272,8 @@ paths:
       security:
       - BearerAuth: []
       summary: Create collection
+      tags:
+      - Collections
   /api/collections/{collectionID}:
     delete:
       description: Deletes a collection by ID.
@@ -637,6 +639,35 @@ paths:
       security:
       - BearerAuth: []
       summary: Subscribe to feed
+      tags:
+      - Feeds
+  /api/feeds/export:
+    get:
+      description: Returns a CSV list of all feeds, or only those the user is subscribed
+        to.
+      parameters:
+      - description: Only subscribed feeds
+        in: query
+        name: subscribedOnly
+        type: boolean
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: 'CSV file with one column: Feed URL'
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Export feeds
       tags:
       - Feeds
   /api/items:
