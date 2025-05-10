@@ -11,6 +11,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/ollama/ollama/api"
 	"github.com/rhajizada/gazette/internal/repository"
+	"github.com/rhajizada/gazette/internal/textsplitter"
 )
 
 func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
@@ -34,6 +35,11 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 		return fmt.Errorf("failed to fetch item %s: %v", itemID, err)
 	}
 
+	if errors.Is(err, sql.ErrNoRows) {
+		log.Printf("%s embeddings for item %s already exist", prefix, itemID)
+		return nil
+	}
+
 	toEmbed := item.Description
 	if len(*item.Content) > len(*item.Description) {
 		toEmbed = item.Content
@@ -42,49 +48,35 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 		toEmbed = item.Title
 	}
 
+	splitter := &textsplitter.RecursiveCharacter{
+		Separators:   []string{"\n\n", "\n", " ", ""},
+		ChunkSize:    500,
+		ChunkOverlap: 50,
+	}
 	extracted := ExtractTextFromHTML(*toEmbed)
 
-	req := api.EmbeddingRequest{
-		Model:  h.OllamaConfig.EmbeddingsModel,
-		Prompt: extracted,
-	}
+	chunks := splitter.Split(extracted)
 
-	resp, err := client.Embeddings(ctx, &req)
-	if err != nil {
-		return fmt.Errorf("failed to generate embedding for item %s: %v", itemID, err)
-	}
-	log.Printf(
-		"%s generated embddings for item %s ",
-		prefix, itemID,
-	)
-
-	embeddingValue := vectorFromFloat64s(resp.Embedding)
-
-	exists := true
-	_, err = h.Repo.GetItemEmbeddingByID(ctx, itemID)
-	if errors.Is(err, sql.ErrNoRows) {
-		exists = false
-	} else {
-		return fmt.Errorf("failed to generate embeddings for item %q: %v", itemID, err)
-	}
-
-	if exists {
-		_, err = h.Repo.UpdateItemEmbeddingByID(ctx, repository.UpdateItemEmbeddingByIDParams{
-			ItemID:    itemID,
-			Embedding: &embeddingValue,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to sync embeddings for item %s: %v", itemID, err)
+	for i, c := range chunks {
+		req := api.EmbeddingRequest{
+			Model:  h.OllamaConfig.EmbeddingsModel,
+			Prompt: c,
 		}
-	} else {
-		_, err = h.Repo.CreateItemEmbedding(ctx, repository.CreateItemEmbeddingParams{
-			ItemID:    itemID,
-			Embedding: &embeddingValue,
-		})
+
+		resp, err := client.Embeddings(ctx, &req)
 		if err != nil {
-			return fmt.Errorf("failed to sync embeddings for item %s: %v", itemID, err)
+			return fmt.Errorf("failed to generate embedding for item %s: %v", itemID, err)
 		}
+		embeddingValue := float64sToVector(resp.Embedding)
+
+		h.Repo.CreateItemEmbedding(ctx, repository.CreateItemEmbeddingParams{
+			ItemID:     itemID,
+			ChunkIndex: int32(i),
+			Embedding:  &embeddingValue,
+		})
+
 	}
+
 	log.Printf(
 		"%s synced embddings for item %s ",
 		prefix, itemID,

@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rhajizada/gazette/internal/repository"
+	"github.com/rhajizada/gazette/internal/workers"
 )
 
 // ListUserLikedItems returns paginated items the user has liked, with liked timestamps.
@@ -148,6 +151,13 @@ func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParam
 			http.StatusInternalServerError,
 		)
 	}
+
+	task, _ := workers.NewEmbedUserTask(r.UserID)
+	_, err = s.Client.Enqueue(task, asynq.Queue("critical"))
+	if err != nil {
+		log.Printf("failed to queue embed task for user %s: %v", r.UserID, err)
+	}
+
 	return &LikeItemResponse{LikedAt: like.LikedAt}, nil
 }
 
@@ -165,6 +175,12 @@ func (s *Service) UnlikeItem(ctx context.Context, r repository.DeleteUserLikePar
 			http.StatusInternalServerError,
 		)
 	}
+	task, _ := workers.NewEmbedUserTask(r.UserID)
+	_, err := s.Client.Enqueue(task, asynq.Queue("critical"))
+	if err != nil {
+		log.Printf("failed to queue embed task for user %s: %v", r.UserID, err)
+	}
+
 	return nil
 }
 

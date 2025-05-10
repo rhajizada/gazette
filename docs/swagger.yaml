@@ -654,7 +654,7 @@ paths:
       - text/csv
       responses:
         "200":
-          description: 'CSV file with one column: Feed URL'
+          description: List of feeds
           schema:
             type: file
         "400":
@@ -821,6 +821,70 @@ paths:
       summary: Like item
       tags:
       - Items
+  /api/subscribed:
+    get:
+      description: Retrieves subscribed items for user, paginated.
+      parameters:
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List subscribed items
+      tags:
+      - Subscribed
+  /api/suggested:
+    get:
+      description: Retrieves suggested items for user, paginated.
+      parameters:
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List suggested items
+      tags:
+      - Suggested
   /api/user:
     get:
       description: Retrieves currently logged in user.

@@ -22,7 +22,7 @@ import type {
 } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
 
-export default function CollectionDetail() {
+export default function CollectionItems() {
   const { collectionID } = useParams<{ collectionID: string }>();
   const { api, logout } = useAuth();
   const PAGE_SIZE = 10;

@@ -23,6 +23,7 @@ export function Navbar() {
   }
 
   const navItems = [
+    { to: "/suggested", label: "Suggested" },
     { to: "/feeds", label: "Feeds" },
     { to: "/collections", label: "Collections" },
   ];
