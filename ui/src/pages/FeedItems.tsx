@@ -23,7 +23,7 @@ import type {
 } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
 
-export default function FeedDetails() {
+export default function FeedItems() {
   const { feedID } = useParams<{ feedID: string }>();
   const { api, logout } = useAuth();
   const PAGE_SIZE = 10;

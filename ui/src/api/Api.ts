@@ -462,6 +462,62 @@ export class Api<
       ...params,
     });
   /**
+   * @description Retrieves subscribed items for user, paginated.
+   *
+   * @tags Subscribed
+   * @name SubscribedList
+   * @summary List subscribed items
+   * @request GET:/api/subscribed
+   * @secure
+   */
+  subscribedList = (
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/subscribed`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves suggested items for user, paginated.
+   *
+   * @tags Suggested
+   * @name SuggestedList
+   * @summary List suggested items
+   * @request GET:/api/suggested
+   * @secure
+   */
+  suggestedList = (
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/suggested`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
    * @description Retrieves currently logged in user.
    *
    * @tags Users

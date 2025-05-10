@@ -19,38 +19,31 @@ type Querier interface {
 	CountItemsByFeedID(ctx context.Context, feedID uuid.UUID) (int64, error)
 	CountItemsInCollection(ctx context.Context, collectionID uuid.UUID) (int64, error)
 	CountLikedItems(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountSubscribedItemsByUser(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountSuggestedItemsByUser(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
-	CreateCollectionEmbedding(ctx context.Context, arg CreateCollectionEmbeddingParams) (CollectionEmbedding, error)
 	CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
-	CreateItemEmbedding(ctx context.Context, arg CreateItemEmbeddingParams) (ItemEmbedding, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	CreateUserEmbedding(ctx context.Context, arg CreateUserEmbeddingParams) (UserEmbedding, error)
 	CreateUserFeedSubscription(ctx context.Context, arg CreateUserFeedSubscriptionParams) (UserFeed, error)
 	CreateUserLike(ctx context.Context, arg CreateUserLikeParams) (UserLike, error)
 	DeleteCollectionByID(ctx context.Context, id uuid.UUID) error
-	DeleteCollectionEmbeddingByID(ctx context.Context, collectionID uuid.UUID) error
 	DeleteFeedByID(ctx context.Context, id uuid.UUID) error
 	DeleteItemByID(ctx context.Context, id uuid.UUID) error
-	DeleteItemEmbeddingByID(ctx context.Context, itemID uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id uuid.UUID) error
-	DeleteUserEmbedding(ctx context.Context, userID uuid.UUID) error
 	DeleteUserFeedSubscription(ctx context.Context, arg DeleteUserFeedSubscriptionParams) error
 	DeleteUserLike(ctx context.Context, arg DeleteUserLikeParams) error
 	ExportFeedsByUserID(ctx context.Context, arg ExportFeedsByUserIDParams) ([]string, error)
 	GetCollectionByID(ctx context.Context, id uuid.UUID) (Collection, error)
-	GetCollectionEmbeddingByID(ctx context.Context, collectionID uuid.UUID) (CollectionEmbedding, error)
 	GetCollectionItem(ctx context.Context, arg GetCollectionItemParams) (CollectionItem, error)
 	GetFeedByFeedLink(ctx context.Context, feedLink string) (Feed, error)
 	GetFeedByID(ctx context.Context, id uuid.UUID) (Feed, error)
 	GetItemByID(ctx context.Context, id uuid.UUID) (Item, error)
-	GetItemEmbeddingByID(ctx context.Context, itemID uuid.UUID) (ItemEmbedding, error)
 	GetLastItem(ctx context.Context, feedID uuid.UUID) (Item, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserBySub(ctx context.Context, sub string) (User, error)
-	GetUserEmbedding(ctx context.Context, userID uuid.UUID) (UserEmbedding, error)
 	GetUserFeedByID(ctx context.Context, arg GetUserFeedByIDParams) (GetUserFeedByIDRow, error)
 	GetUserFeedSubscription(ctx context.Context, arg GetUserFeedSubscriptionParams) (UserFeed, error)
 	GetUserLike(ctx context.Context, arg GetUserLikeParams) (UserLike, error)
@@ -61,6 +54,8 @@ type Querier interface {
 	ListItemsByFeedID(ctx context.Context, arg ListItemsByFeedIDParams) ([]Item, error)
 	ListItemsByFeedIDForUser(ctx context.Context, arg ListItemsByFeedIDForUserParams) ([]ListItemsByFeedIDForUserRow, error)
 	ListItemsInCollection(ctx context.Context, arg ListItemsInCollectionParams) ([]ListItemsInCollectionRow, error)
+	ListSubscribedItemsByUser(ctx context.Context, arg ListSubscribedItemsByUserParams) ([]ListSubscribedItemsByUserRow, error)
+	ListSuggestedItemsByUser(ctx context.Context, arg ListSuggestedItemsByUserParams) ([]ListSuggestedItemsByUserRow, error)
 	ListUserFeedSubscriptions(ctx context.Context, arg ListUserFeedSubscriptionsParams) ([]UserFeed, error)
 	ListUserLikedItems(ctx context.Context, arg ListUserLikedItemsParams) ([]ListUserLikedItemsRow, error)
 	ListUserLikesByItem(ctx context.Context, arg ListUserLikesByItemParams) ([]UserLike, error)
@@ -68,12 +63,9 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	RemoveItemFromCollection(ctx context.Context, arg RemoveItemFromCollectionParams) error
 	UpdateCollectionByID(ctx context.Context, arg UpdateCollectionByIDParams) (Collection, error)
-	UpdateCollectionEmbeddingByID(ctx context.Context, arg UpdateCollectionEmbeddingByIDParams) (CollectionEmbedding, error)
 	UpdateFeedByID(ctx context.Context, arg UpdateFeedByIDParams) (Feed, error)
 	UpdateItemByID(ctx context.Context, arg UpdateItemByIDParams) (Item, error)
-	UpdateItemEmbeddingByID(ctx context.Context, arg UpdateItemEmbeddingByIDParams) (ItemEmbedding, error)
 	UpdateUserByID(ctx context.Context, arg UpdateUserByIDParams) (User, error)
-	UpdateUserEmbedding(ctx context.Context, arg UpdateUserEmbeddingParams) (UserEmbedding, error)
 }
 
 var _ Querier = (*Queries)(nil)

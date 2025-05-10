@@ -19,6 +19,14 @@ import (
 var Version = "dev"
 
 func main() {
+	nullFile, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0666)
+	if err != nil {
+		log.Println("error opening /dev/null:", err)
+		return
+	}
+	defer nullFile.Close()
+
+	os.Stdout = nullFile
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.Parse()
 
@@ -82,6 +90,7 @@ func main() {
 	mux.HandleFunc(workers.TypeSyncData, handler.HandleDataSync)
 	mux.HandleFunc(workers.TypeSyncFeed, handler.HandleFeedSync)
 	mux.HandleFunc(workers.TypeEmbedItem, handler.HandleEmbedItem)
+	mux.HandleFunc(workers.TypeEmbedUser, handler.HandleEmbedUser)
 
 	if err := server.Run(mux); err != nil {
 		log.Panicf("could not run worker: %v", err)
