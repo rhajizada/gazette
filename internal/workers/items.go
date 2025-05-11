@@ -50,8 +50,8 @@ func (h *Handler) HandleEmbedItem(ctx context.Context, t *asynq.Task) error {
 
 	splitter := &textsplitter.RecursiveCharacter{
 		Separators:   []string{"\n\n", "\n", " ", ""},
-		ChunkSize:    64,
-		ChunkOverlap: 16,
+		ChunkSize:    256,
+		ChunkOverlap: 64,
 	}
 	extracted := ExtractTextFromHTML(*toEmbed)
 

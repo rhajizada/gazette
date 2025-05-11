@@ -72,6 +72,10 @@ func (h *Handler) HandleEmbedUser(ctx context.Context, t *asynq.Task) error {
 		}
 	}
 
+	if len(points) == 0 {
+		return errors.New("no item embeddings available, skipping user profile embedding")
+	}
+
 	centroids, err := ClusterizeEmbeddings(points)
 	if err != nil {
 		return fmt.Errorf("failed to clusterize embeddings for user %s: %w", userID, err)
