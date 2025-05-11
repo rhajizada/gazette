@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -102,12 +103,7 @@ export function ItemPreview({ item }: ItemPreviewProps) {
           {item.authors && item.authors?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {item.authors.map((a, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 bg-gray-100 text-xs rounded-full"
-                >
-                  {a.name || a.email}
-                </span>
+                <Badge key={i}>{a.name || a.email}</Badge>
               ))}
             </div>
           )}
