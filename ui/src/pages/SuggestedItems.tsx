@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Footer } from "@/components/Footer";
 import { ItemPreview } from "@/components/ItemPreview";
 import { Navbar } from "@/components/Navbar";
@@ -12,8 +13,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Spinner } from "@/components/ui/spinner";
-import { useCallback, useEffect, useState } from "react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
@@ -21,51 +21,84 @@ import { useAuth } from "../context/AuthContext";
 export default function SuggestedItems() {
   const { api, logout } = useAuth();
   const PAGE_SIZE = 10;
+  const CHUNK_SIZE = 100;
 
-  const [items, setItems] = useState<ItemModel[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [allItems, setAllItems] = React.useState<ItemModel[]>([]);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [loadedCount, setLoadedCount] = React.useState(0);
+  const [preloading, setPreloading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
+  const [page, setPage] = React.useState(1);
+  const [search, setSearch] = React.useState("");
   type SortKey = "title" | "published_parsed";
-  const [sortKey, setSortKey] = useState<SortKey>("published_parsed");
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortKey, setSortKey] = React.useState<SortKey>("published_parsed");
+  const [sortAsc, setSortAsc] = React.useState(false);
   const labelMap: Record<SortKey, string> = {
     title: "title",
     published_parsed: "published",
   };
 
-  const fetchItems = useCallback(() => {
-    setLoading(true);
-    api
-      .suggestedList(
-        { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
-        { secure: true, format: "json" },
-      )
-      .then((res) => {
-        setItems(res.data.items ?? []);
-        setTotal(res.data.total_count ?? 0);
-      })
-      .catch((err: any) => {
-        if (err.error === "Unauthorized") logout();
-        else {
-          const msg = err.text?.() ?? "Failed to load suggested items";
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadAllPages() {
+      try {
+        const first = await api.suggestedList(
+          { limit: CHUNK_SIZE, offset: 0 },
+          { secure: true, format: "json" },
+        );
+        if (cancelled) return;
+
+        const total = first.data.total_count ?? 0;
+        setTotalCount(total);
+
+        let acc = first.data.items!;
+        setAllItems(acc);
+        console.log(`L1 ${first.data.items!.length}`);
+        console.log(`L2 ${acc.length}`);
+        setLoadedCount(acc.length);
+
+        const pages = Math.ceil(total / CHUNK_SIZE);
+        for (let p = 2; p <= pages && !cancelled; p++) {
+          const res = await api.suggestedList(
+            { limit: CHUNK_SIZE, offset: (p - 1) * CHUNK_SIZE },
+            { secure: true, format: "json" },
+          );
+          if (cancelled) break;
+
+          const itemsPage = res.data.items!;
+          acc = acc.concat(itemsPage);
+          console.log(`L1 ${res.data.items!.length}`);
+          console.log(`L2 ${acc.length}`);
+          setAllItems([...acc]);
+          setLoadedCount(acc.length);
+        }
+      } catch (err: any) {
+        if (err.error === "Unauthorized") {
+          logout();
+        } else {
+          const msg = err.text?.() ?? "failed to load suggested items";
           toast.error(msg);
           setError(msg);
         }
-      })
-      .finally(() => setLoading(false));
-  }, [api, logout, page]);
+      } finally {
+        if (!cancelled) setPreloading(false);
+      }
+    }
 
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    loadAllPages();
+    return () => {
+      cancelled = true;
+    };
+  }, [api, logout]);
 
-  if (error) return <p className="text-center text-red-600">{error}</p>;
+  if (error) {
+    return <p className="text-center text-red-600">{error}</p>;
+  }
 
-  const filtered = items
+  // client‐side filter & sort
+  const processed = allItems
     .filter((it) =>
       [it.title, it.description]
         .filter(Boolean)
@@ -87,14 +120,17 @@ export default function SuggestedItems() {
       return sortAsc ? cmp : -cmp;
     });
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-  const pages: (number | "ellipsis")[] = [];
+  const totalPages = Math.ceil(processed.length / PAGE_SIZE);
+  const paginated = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // page buttons
+  const pagesArr: (number | "ellipsis")[] = [];
   if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    for (let i = 1; i <= totalPages; i++) pagesArr.push(i);
   } else if (page <= 4) {
-    pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
+    pagesArr.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
   } else if (page > totalPages - 4) {
-    pages.push(
+    pagesArr.push(
       1,
       "ellipsis",
       totalPages - 4,
@@ -104,7 +140,15 @@ export default function SuggestedItems() {
       totalPages,
     );
   } else {
-    pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages);
+    pagesArr.push(
+      1,
+      "ellipsis",
+      page - 1,
+      page,
+      page + 1,
+      "ellipsis",
+      totalPages,
+    );
   }
 
   return (
@@ -146,57 +190,73 @@ export default function SuggestedItems() {
             </Button>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-20">
-              <Spinner />
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-center">No suggested items.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filtered.map((item) => (
-                <ItemPreview key={item.id} item={item} />
-              ))}
+          {preloading && (
+            <div className="mb-8">
+              <Progress
+                value={
+                  totalCount > 0
+                    ? Math.round((loadedCount / totalCount) * 100)
+                    : 0
+                }
+                className="w-full"
+              />
+              <p className="mt-1 text-sm text-gray-600">
+                Loading ({loadedCount}/{totalCount})
+              </p>
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex justify-center">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      aria-disabled={page === 1}
-                    />
-                  </PaginationItem>
-                  {pages.map((p, i) =>
-                    p === "ellipsis" ? (
-                      <PaginationItem key={i}>
-                        <PaginationEllipsis />
+          {!preloading && (
+            <>
+              {paginated.length === 0 ? (
+                <p className="text-center">No suggested items.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {paginated.map((item) => (
+                    <ItemPreview key={item.id} item={item} />
+                  ))}
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="mt-8 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          aria-disabled={page === 1}
+                        />
                       </PaginationItem>
-                    ) : (
-                      <PaginationItem key={p}>
-                        <PaginationLink
-                          onClick={() => setPage(p as number)}
-                          isActive={p === page}
-                        >
-                          {p}
-                        </PaginationLink>
+                      {pagesArr.map((p, i) =>
+                        p === "ellipsis" ? (
+                          <PaginationItem key={i}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        ) : (
+                          <PaginationItem key={p}>
+                            <PaginationLink
+                              onClick={() => setPage(p as number)}
+                              isActive={p === page}
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ),
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() =>
+                            setPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          aria-disabled={page === totalPages}
+                        />
                       </PaginationItem>
-                    ),
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      aria-disabled={page === totalPages}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>

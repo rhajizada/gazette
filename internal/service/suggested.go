@@ -37,7 +37,7 @@ func (s *Service) ListUserSuggestedItems(ctx context.Context, r repository.ListS
 		}
 	}
 
-	items := make([]Item, total)
+	items := make([]Item, len(rows))
 	for i, row := range rows {
 		auths := make(Authors, len(row.Authors))
 		for j, a := range row.Authors {
