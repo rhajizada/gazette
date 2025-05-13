@@ -36,7 +36,7 @@ func (s *Service) ListUserSubscribedItems(ctx context.Context, r repository.List
 		}
 	}
 
-	items := make([]Item, total)
+	items := make([]Item, len(rows))
 	for i, row := range rows {
 		auths := make(Authors, len(row.Authors))
 		for j, a := range row.Authors {

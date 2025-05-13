@@ -12,8 +12,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Spinner } from "@/components/ui/spinner";
-import { useCallback, useEffect, useState } from "react";
+import { Progress } from "@/components/ui/progress";
+import * as React from "react";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts";
@@ -22,51 +22,82 @@ import { useAuth } from "../context/AuthContext";
 export default function SubscribedItems() {
   const { api, logout } = useAuth();
   const PAGE_SIZE = 10;
+  const CHUNK_SIZE = 100;
 
-  const [items, setItems] = useState<ItemModel[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [allItems, setAllItems] = React.useState<ItemModel[]>([]);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [loadedCount, setLoadedCount] = React.useState(0);
+  const [preloading, setPreloading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
+  const [page, setPage] = React.useState(1);
+  const [search, setSearch] = React.useState("");
   type SortKey = "title" | "published_parsed";
-  const [sortKey, setSortKey] = useState<SortKey>("published_parsed");
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortKey, setSortKey] = React.useState<SortKey>("published_parsed");
+  const [sortAsc, setSortAsc] = React.useState(false);
   const labelMap: Record<SortKey, string> = {
     title: "title",
     published_parsed: "published",
   };
 
-  const fetchItems = useCallback(() => {
-    setLoading(true);
-    api
-      .subscribedList(
-        { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
-        { secure: true, format: "json" },
-      )
-      .then((res) => {
-        setItems(res.data.items ?? []);
-        setTotal(res.data.total_count ?? 0);
-      })
-      .catch((err: any) => {
-        if (err.error === "Unauthorized") logout();
-        else {
-          const msg = err.text?.() ?? "Failed to load subscribed items";
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadAll() {
+      try {
+        const first = await api.subscribedList(
+          { limit: CHUNK_SIZE, offset: 0 },
+          { secure: true, format: "json" },
+        );
+        if (cancelled) return;
+
+        const total = first.data.total_count ?? 0;
+        setTotalCount(total);
+
+        let acc = first.data.items ?? [];
+        setAllItems(acc.slice(0, total));
+        setLoadedCount(Math.min(acc.length, total));
+
+        let offset = CHUNK_SIZE;
+        while (!cancelled && acc.length < total) {
+          const res = await api.subscribedList(
+            { limit: CHUNK_SIZE, offset },
+            { secure: true, format: "json" },
+          );
+          if (cancelled) break;
+
+          const next = res.data.items ?? [];
+          if (next.length === 0) break;
+
+          acc = acc.concat(next);
+          const clamped = acc.slice(0, total);
+          setAllItems(clamped);
+          setLoadedCount(clamped.length);
+
+          offset += CHUNK_SIZE;
+        }
+      } catch (err: any) {
+        if (err.error === "Unauthorized") {
+          logout();
+        } else {
+          const msg = err.text?.() ?? "failed to load subscribed items";
           toast.error(msg);
           setError(msg);
         }
-      })
-      .finally(() => setLoading(false));
-  }, [api, logout, page]);
+      } finally {
+        if (!cancelled) setPreloading(false);
+      }
+    }
 
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    loadAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [api, logout]);
 
   if (error) return <Navigate to="/*" />;
 
-  const filtered = items
+  const processed = allItems
     .filter((it) =>
       [it.title, it.description]
         .filter(Boolean)
@@ -88,14 +119,16 @@ export default function SubscribedItems() {
       return sortAsc ? cmp : -cmp;
     });
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-  const pages: (number | "ellipsis")[] = [];
+  const totalPages = Math.ceil(processed.length / PAGE_SIZE);
+  const paginated = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const pagesArr: (number | "ellipsis")[] = [];
   if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    for (let i = 1; i <= totalPages; i++) pagesArr.push(i);
   } else if (page <= 4) {
-    pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
+    pagesArr.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
   } else if (page > totalPages - 4) {
-    pages.push(
+    pagesArr.push(
       1,
       "ellipsis",
       totalPages - 4,
@@ -105,7 +138,15 @@ export default function SubscribedItems() {
       totalPages,
     );
   } else {
-    pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages);
+    pagesArr.push(
+      1,
+      "ellipsis",
+      page - 1,
+      page,
+      page + 1,
+      "ellipsis",
+      totalPages,
+    );
   }
 
   return (
@@ -113,7 +154,6 @@ export default function SubscribedItems() {
       <Navbar />
       <main className="flex-grow bg-gray-50 p-6">
         <div className="container mx-auto px-4">
-          {/* no header here */}
           <div className="mt-4 mb-6 flex items-center gap-2">
             <Input
               placeholder="Search..."
@@ -128,14 +168,12 @@ export default function SubscribedItems() {
               variant="outline"
               size="sm"
               onClick={() => {
-                if (sortKey === "title" && sortAsc) {
-                  setSortAsc(false);
-                } else if (sortKey === "title") {
+                if (sortKey === "title" && sortAsc) setSortAsc(false);
+                else if (sortKey === "title") {
                   setSortKey("published_parsed");
                   setSortAsc(true);
-                } else if (sortAsc) {
-                  setSortAsc(false);
-                } else {
+                } else if (sortAsc) setSortAsc(false);
+                else {
                   setSortKey("title");
                   setSortAsc(true);
                 }
@@ -146,57 +184,73 @@ export default function SubscribedItems() {
             </Button>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-20">
-              <Spinner />
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-center">No subscribed items found.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filtered.map((item) => (
-                <ItemPreview key={item.id} item={item} />
-              ))}
+          {preloading && (
+            <div className="mb-8">
+              <Progress
+                value={
+                  totalCount > 0
+                    ? Math.round((loadedCount / totalCount) * 100)
+                    : 0
+                }
+                className="w-full"
+              />
+              <p className="mt-1 text-sm text-gray-600">
+                Loading ({loadedCount}/{totalCount})
+              </p>
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex justify-center">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      aria-disabled={page === 1}
-                    />
-                  </PaginationItem>
-                  {pages.map((p, i) =>
-                    p === "ellipsis" ? (
-                      <PaginationItem key={i}>
-                        <PaginationEllipsis />
+          {!preloading && (
+            <>
+              {paginated.length === 0 ? (
+                <p className="text-center">No subscribed items found.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {paginated.map((item) => (
+                    <ItemPreview key={item.id} item={item} />
+                  ))}
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="mt-8 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          aria-disabled={page === 1}
+                        />
                       </PaginationItem>
-                    ) : (
-                      <PaginationItem key={p}>
-                        <PaginationLink
-                          onClick={() => setPage(p as number)}
-                          isActive={p === page}
-                        >
-                          {p}
-                        </PaginationLink>
+                      {pagesArr.map((p, i) =>
+                        p === "ellipsis" ? (
+                          <PaginationItem key={i}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        ) : (
+                          <PaginationItem key={p}>
+                            <PaginationLink
+                              onClick={() => setPage(p as number)}
+                              isActive={p === page}
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ),
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() =>
+                            setPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          aria-disabled={page === totalPages}
+                        />
                       </PaginationItem>
-                    ),
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      aria-disabled={page === totalPages}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
