@@ -12,7 +12,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Progress } from "@/components/ui/progress";
 import * as React from "react";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -25,8 +24,6 @@ export default function SubscribedItems() {
   const CHUNK_SIZE = 100;
 
   const [allItems, setAllItems] = React.useState<ItemModel[]>([]);
-  const [totalCount, setTotalCount] = React.useState(0);
-  const [loadedCount, setLoadedCount] = React.useState(0);
   const [preloading, setPreloading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -52,11 +49,8 @@ export default function SubscribedItems() {
         if (cancelled) return;
 
         const total = first.data.total_count ?? 0;
-        setTotalCount(total);
-
         let acc = first.data.items ?? [];
         setAllItems(acc.slice(0, total));
-        setLoadedCount(Math.min(acc.length, total));
 
         let offset = CHUNK_SIZE;
         while (!cancelled && acc.length < total) {
@@ -69,10 +63,8 @@ export default function SubscribedItems() {
           const next = res.data.items ?? [];
           if (next.length === 0) break;
 
-          acc = acc.concat(next);
-          const clamped = acc.slice(0, total);
-          setAllItems(clamped);
-          setLoadedCount(clamped.length);
+          acc = acc.concat(next).slice(0, total);
+          setAllItems(acc);
 
           offset += CHUNK_SIZE;
         }
@@ -123,30 +115,18 @@ export default function SubscribedItems() {
   const paginated = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const pagesArr: (number | "ellipsis")[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pagesArr.push(i);
-  } else if (page <= 4) {
-    pagesArr.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
-  } else if (page > totalPages - 4) {
-    pagesArr.push(
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    );
-  } else {
-    pagesArr.push(
-      1,
-      "ellipsis",
-      page - 1,
-      page,
-      page + 1,
-      "ellipsis",
-      totalPages,
-    );
+  if (totalPages > 0) {
+    pagesArr.push(1);
+    if (page > 3) pagesArr.push("ellipsis");
+    for (
+      let p = Math.max(2, page - 2);
+      p <= Math.min(totalPages - 1, page + 2);
+      p++
+    ) {
+      pagesArr.push(p);
+    }
+    if (page < totalPages - 2) pagesArr.push("ellipsis");
+    if (totalPages > 1) pagesArr.push(totalPages);
   }
 
   return (
@@ -184,22 +164,6 @@ export default function SubscribedItems() {
             </Button>
           </div>
 
-          {preloading && (
-            <div className="mb-8">
-              <Progress
-                value={
-                  totalCount > 0
-                    ? Math.round((loadedCount / totalCount) * 100)
-                    : 0
-                }
-                className="w-full"
-              />
-              <p className="mt-1 text-sm text-gray-600">
-                Loading ({loadedCount}/{totalCount})
-              </p>
-            </div>
-          )}
-
           {!preloading && (
             <>
               {paginated.length === 0 ? (
@@ -224,7 +188,7 @@ export default function SubscribedItems() {
                       </PaginationItem>
                       {pagesArr.map((p, i) =>
                         p === "ellipsis" ? (
-                          <PaginationItem key={i}>
+                          <PaginationItem key={`e${i}`}>
                             <PaginationEllipsis />
                           </PaginationItem>
                         ) : (

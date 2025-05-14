@@ -50,7 +50,6 @@ export default function FeedItems() {
 
   useEffect(() => {
     if (!feedID) return;
-
     setLoading(true);
     api
       .feedsDetail(feedID, { secure: true, format: "json" })
@@ -157,28 +156,21 @@ export default function FeedItems() {
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const pages: (number | "ellipsis")[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else if (page <= 4) {
-    pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
-  } else if (page > totalPages - 4) {
-    pages.push(
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    );
-  } else {
-    pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages);
+  if (totalPages > 0) {
+    pages.push(1);
+    if (page > 3) pages.push("ellipsis");
+    const start = Math.max(2, page - 2);
+    const end = Math.min(totalPages - 1, page + 2);
+    for (let p = start; p <= end; p++) {
+      pages.push(p);
+    }
+    if (page < totalPages - 2) pages.push("ellipsis");
+    if (totalPages > 1) pages.push(totalPages);
   }
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-
       <main className="flex-grow bg-gray-50 p-6">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
@@ -272,7 +264,7 @@ export default function FeedItems() {
                   </PaginationItem>
                   {pages.map((p, i) =>
                     p === "ellipsis" ? (
-                      <PaginationItem key={i}>
+                      <PaginationItem key={`e${i}`}>
                         <PaginationEllipsis />
                       </PaginationItem>
                     ) : (
@@ -300,7 +292,6 @@ export default function FeedItems() {
           )}
         </div>
       </main>
-
       <div className="mt-auto">
         <Footer />
       </div>
