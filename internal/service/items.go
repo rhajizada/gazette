@@ -135,6 +135,84 @@ func (s *Service) GetItem(ctx context.Context, r GetItemRequest) (*Item, error) 
 	return &item, nil
 }
 
+// ListSimiliarItemsByID retrieves top 10 most similiar items to given one.
+func (s *Service) ListSimiliarItemsByID(ctx context.Context, r repository.ListSimilarItemsByItemIDForUserParams) (*ListItemsResponse, error) {
+	_, err := s.GetItem(ctx, GetItemRequest{
+		ItemID: r.ItemID,
+		UserID: r.UserID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	total, err := s.Repo.CountSimilarItemsByItemID(ctx, r.ItemID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			total = 0
+		} else {
+			return nil, NewError(
+				"failed to count similiar items",
+				http.StatusInternalServerError,
+			)
+		}
+	}
+
+	var rows []repository.ListSimilarItemsByItemIDForUserRow
+	if total == 0 {
+		rows = make([]repository.ListSimilarItemsByItemIDForUserRow, 0)
+	} else {
+		rows, err = s.Repo.ListSimilarItemsByItemIDForUser(ctx, r)
+		if err != nil {
+			return nil, NewError(
+				"failed to fetch similiar items",
+				http.StatusInternalServerError,
+			)
+		}
+	}
+
+	items := make([]Item, len(rows))
+	for i, row := range rows {
+		likedAt := row.LikedAt
+		liked := likedAt != nil
+
+		if like, err := s.Repo.GetUserLike(ctx, repository.GetUserLikeParams{UserID: r.UserID, ItemID: r.ItemID}); err == nil {
+			liked = true
+			likedAt = &like.LikedAt
+		}
+		auths := make(Authors, len(row.Authors))
+		for j, a := range row.Authors {
+			auths[j] = Person{Name: a.Name, Email: a.Email}
+		}
+
+		items[i] = Item{
+			ID:              row.ID,
+			FeedID:          row.FeedID,
+			Title:           row.Title,
+			Description:     row.Description,
+			Content:         row.Content,
+			Link:            row.Link,
+			Links:           row.Links,
+			UpdatedParsed:   row.UpdatedParsed,
+			PublishedParsed: row.PublishedParsed,
+			Authors:         auths,
+			GUID:            row.Guid,
+			Image:           row.Image,
+			Categories:      row.Categories,
+			Enclosures:      row.Enclosures,
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+			Liked:           liked,
+			LikedAt:         likedAt,
+		}
+	}
+	return &ListItemsResponse{
+		Limit:      r.Limit,
+		Offset:     r.Offset,
+		TotalCount: total,
+		Items:      items,
+	}, nil
+}
+
 // LikeItem marks an item as liked by the user.
 func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParams) (*LikeItemResponse, error) {
 	like, err := s.Repo.CreateUserLike(ctx, r)

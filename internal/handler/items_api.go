@@ -90,6 +90,55 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(item)
 }
 
+// ListSimiliarItemsByID returns paginated list of similiar items.
+// @Summary      List similiar items
+// @Description  Retrieves paginated list of similiar items.
+// @Tags         Items
+// @Param        itemID  path      string  true  "Item UUID"
+// @Param        limit   query     int32   true  "Max number of items"
+// @Param        offset  query     int32   true  "Number of items to skip"
+// @Success      200     {object}  service.Item
+// @Failure      400     {object}  string
+// @Failure      404     {object}  string
+// @Failure      500     {object}  string
+// @Security     BearerAuth
+// @Router       /api/items/{itemID}/similiar [get]
+func (h *Handler) ListSimiliarItemsByID(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserClaims(r).UserID
+	itemPath := r.PathValue("itemID")
+	itemID, err := uuid.Parse(itemPath)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s is not a valid id", itemPath), http.StatusBadRequest)
+		return
+	}
+
+	params, err := getPageParams(r.URL.Query())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	items, err := h.Service.ListSimiliarItemsByID(r.Context(), repository.ListSimilarItemsByItemIDForUserParams{
+		ItemID: itemID,
+		UserID: userID,
+		Limit:  params.Limit,
+		Offset: params.Offset,
+	})
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		} else {
+			http.Error(w, fmt.Sprintf("failed to fetch similiar items %s", itemID), http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
+
 // LikeItem marks an item as liked by the user.
 // @Summary      Like item
 // @Description  Creates a like record for the current user on an item.
