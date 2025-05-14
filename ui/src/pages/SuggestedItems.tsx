@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Footer } from "@/components/Footer";
 import { ItemPreview } from "@/components/ItemPreview";
 import { Navbar } from "@/components/Navbar";
@@ -14,6 +13,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Progress } from "@/components/ui/progress";
+import * as React from "react";
 import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
@@ -55,8 +55,6 @@ export default function SuggestedItems() {
 
         let acc = first.data.items!;
         setAllItems(acc);
-        console.log(`L1 ${first.data.items!.length}`);
-        console.log(`L2 ${acc.length}`);
         setLoadedCount(acc.length);
 
         const pages = Math.ceil(total / CHUNK_SIZE);
@@ -69,8 +67,6 @@ export default function SuggestedItems() {
 
           const itemsPage = res.data.items!;
           acc = acc.concat(itemsPage);
-          console.log(`L1 ${res.data.items!.length}`);
-          console.log(`L2 ${acc.length}`);
           setAllItems([...acc]);
           setLoadedCount(acc.length);
         }
@@ -97,7 +93,6 @@ export default function SuggestedItems() {
     return <p className="text-center text-red-600">{error}</p>;
   }
 
-  // client‐side filter & sort
   const processed = allItems
     .filter((it) =>
       [it.title, it.description]
@@ -123,32 +118,19 @@ export default function SuggestedItems() {
   const totalPages = Math.ceil(processed.length / PAGE_SIZE);
   const paginated = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // page buttons
   const pagesArr: (number | "ellipsis")[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pagesArr.push(i);
-  } else if (page <= 4) {
-    pagesArr.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
-  } else if (page > totalPages - 4) {
-    pagesArr.push(
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    );
-  } else {
-    pagesArr.push(
-      1,
-      "ellipsis",
-      page - 1,
-      page,
-      page + 1,
-      "ellipsis",
-      totalPages,
-    );
+  if (totalPages > 0) {
+    pagesArr.push(1);
+    if (page > 3) pagesArr.push("ellipsis");
+
+    const start = Math.max(2, page - 2);
+    const end = Math.min(totalPages - 1, page + 2);
+    for (let p = start; p <= end; p++) {
+      pagesArr.push(p);
+    }
+
+    if (page < totalPages - 2) pagesArr.push("ellipsis");
+    if (totalPages > 1) pagesArr.push(totalPages);
   }
 
   return (
@@ -230,7 +212,7 @@ export default function SuggestedItems() {
                       </PaginationItem>
                       {pagesArr.map((p, i) =>
                         p === "ellipsis" ? (
-                          <PaginationItem key={i}>
+                          <PaginationItem key={`e${i}`}>
                             <PaginationEllipsis />
                           </PaginationItem>
                         ) : (
