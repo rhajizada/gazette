@@ -18,6 +18,7 @@ func RegisterAPI(h *handler.Handler) *http.ServeMux {
 	router.HandleFunc("DELETE /collections/{collectionID}/item/{itemID}", h.RemoveItemFromCollection)
 	router.HandleFunc("GET /items/", h.ListUserLikedItems)
 	router.HandleFunc("GET /items/{itemID}", h.GetItemByID)
+	router.HandleFunc("GET /items/{itemID}/similiar", h.ListSimiliarItemsByID)
 	router.HandleFunc("POST /items/{itemID}/like", h.LikeItem)
 	router.HandleFunc("DELETE /items/{itemID}/like", h.UnlikeItem)
 	router.HandleFunc("GET /items/{itemID}/collections", h.ListItemCollections)

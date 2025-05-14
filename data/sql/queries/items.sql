@@ -27,6 +27,58 @@ SELECT
 FROM items
 WHERE id = $1;
 
+-- name: ListSimilarItemsByItemIDForUser :many
+SELECT
+  it.id,
+  it.feed_id,
+  it.title,
+  it.description,
+  it.content,
+  it.link,
+  it.links,
+  it.updated_parsed,
+  it.published_parsed,
+  it.authors,
+  it.guid,
+  it.image,
+  it.categories,
+  it.enclosures,
+  it.created_at,
+  it.updated_at,
+  (ul.user_id IS NOT NULL) AS liked,
+  ul.liked_at
+FROM (
+  SELECT
+    e.item_id
+  FROM item_embeddings ie
+  JOIN item_embeddings e
+    ON e.item_id <> ie.item_id
+  WHERE ie.item_id = $1
+  GROUP BY e.item_id
+  HAVING MIN(e.embedding <#> ie.embedding) <= 0.15
+  ORDER BY MIN(e.embedding <#> ie.embedding) ASC
+  LIMIT  $3
+  OFFSET $4
+) AS sims
+JOIN items it
+  ON it.id = sims.item_id
+LEFT JOIN user_likes ul
+  ON ul.user_id = $2
+  AND ul.item_id = it.id;
+
+-- name: CountSimilarItemsByItemID :one
+SELECT COUNT(*) AS similar_count
+FROM (
+  SELECT
+    e.item_id
+  FROM item_embeddings ie
+  JOIN item_embeddings e
+    ON e.item_id <> ie.item_id
+  WHERE ie.item_id = $1
+  GROUP BY e.item_id
+  HAVING MIN(e.embedding <#> ie.embedding) <= 0.15
+) AS sims;
+
 -- name: CountItemsByFeedID :one
 SELECT COUNT(*) AS count
 FROM items

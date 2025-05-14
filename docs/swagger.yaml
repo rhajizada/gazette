@@ -589,7 +589,7 @@ paths:
       - BearerAuth: []
       summary: List feed items
       tags:
-      - Items
+      - Feeds
   /api/feeds/{feedID}/subscribe:
     delete:
       description: Removes the user’s subscription to a feed.
@@ -819,6 +819,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Like item
+      tags:
+      - Items
+  /api/items/{itemID}/similiar:
+    get:
+      description: Retrieves paginated list of similiar items.
+      parameters:
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Item'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List similiar items
       tags:
       - Items
   /api/subscribed:

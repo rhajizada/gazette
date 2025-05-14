@@ -292,7 +292,7 @@ export class Api<
   /**
    * @description Retrieves feed items.
    *
-   * @tags Items
+   * @tags Feeds
    * @name FeedsItemsList
    * @summary List feed items
    * @request GET:/api/feeds/{feedID}/items
@@ -458,6 +458,32 @@ export class Api<
     this.request<void, string>({
       path: `/api/items/${itemId}/like`,
       method: "DELETE",
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves paginated list of similiar items.
+   *
+   * @tags Items
+   * @name ItemsSimiliarList
+   * @summary List similiar items
+   * @request GET:/api/items/{itemID}/similiar
+   * @secure
+   */
+  itemsSimiliarList = (
+    itemId: string,
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<GithubComRhajizadaGazetteInternalServiceItem, string>({
+      path: `/api/items/${itemId}/similiar`,
+      method: "GET",
+      query: query,
       secure: true,
       ...params,
     });
