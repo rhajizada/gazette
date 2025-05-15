@@ -44,6 +44,10 @@ export default function ItemDetails() {
   const [included, setIncluded] = useState<Record<string, boolean>>({});
   const [collectionsLoading, setCollectionsLoading] = useState(false);
 
+  const [similarItems, setSimilarItems] = useState<ItemModel[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState<string | null>(null);
+
   const [open, setOpen] = useState(false);
 
   const getColor = (id: string) => {
@@ -134,6 +138,31 @@ export default function ItemDetails() {
       fetchCollections();
     }
   }, [item, error, notFound, fetchCollections]);
+
+  useEffect(() => {
+    if (!itemID) return;
+    setSimilarLoading(true);
+    setSimilarError(null);
+    api
+      .itemsSimiliarList(
+        itemID,
+        { limit: 5, offset: 0 },
+        { secure: true, format: "json" },
+      )
+      .then((res) => {
+        setSimilarItems(
+          Array.isArray(res.data) ? res.data : res.data.items || [],
+        );
+      })
+      .catch(async (err: any) => {
+        if (err.error === "Unauthorized") logout();
+        else {
+          const msg = await err.text();
+          setSimilarError(msg || "Failed to load similar items");
+        }
+      })
+      .finally(() => setSimilarLoading(false));
+  }, [api, itemID, logout]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -373,6 +402,41 @@ export default function ItemDetails() {
                 <Link to={`/collections/${c.id}`}>{c.name}</Link>
               </Badge>
             ))}
+          </div>
+          <div className="mt-8 clear-left">
+            {similarLoading && (
+              <div className="mt-4">
+                <Spinner />
+              </div>
+            )}
+            {similarError && (
+              <p className="mt-4 text-sm text-red-600">{similarError}</p>
+            )}
+            {!similarLoading && similarItems.length > 0 && (
+              <>
+                <h2 className="text-3xl font-semibold">Similar items</h2>
+                <ul className="mt-4 space-y-2">
+                  {similarItems.map((sim) => (
+                    <div
+                      key={sim.id}
+                      className="min-w-[240px] flex-shrink-0 p-2 hover:shadow-lg transition-shadow"
+                    >
+                      <Link
+                        to={`/items/${sim.id}`}
+                        className="text-md font-semibold hover:underline block mb-2"
+                      >
+                        {sim.title}
+                      </Link>
+                      {sim.published_parsed && (
+                        <p className="text-xs text-gray-400 mb-2">
+                          {new Date(sim.published_parsed).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </aside>
       </main>
