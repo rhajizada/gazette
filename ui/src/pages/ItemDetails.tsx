@@ -23,6 +23,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import type {
   GithubComRhajizadaGazetteInternalServiceCollection as CollectionModel,
+  GithubComRhajizadaGazetteInternalServiceFeed as FeedModel,
   GithubComRhajizadaGazetteInternalServiceItem as ItemModel,
 } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
@@ -38,6 +39,8 @@ export default function ItemDetails() {
 
   const [liked, setLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+
+  const [feed, setFeed] = useState<FeedModel | null>(null);
 
   const [collections, setCollections] = useState<CollectionModel[]>([]);
   const [userCollections, setMyCollections] = useState<CollectionModel[]>([]);
@@ -59,7 +62,6 @@ export default function ItemDetails() {
     return `hsl(${hue}, 70%, 50%)`;
   };
 
-  // fetch item detail
   useEffect(() => {
     if (!itemID) return;
     setLoading(true);
@@ -82,7 +84,16 @@ export default function ItemDetails() {
       .finally(() => setLoading(false));
   }, [api, itemID, logout]);
 
-  // fetch collections logic
+  useEffect(() => {
+    if (!item?.feed_id) return;
+    api
+      .feedsDetail(item.feed_id, { secure: true, format: "json" })
+      .then((res) => setFeed(res.data))
+      .catch(async (err: any) => {
+        if (err.error === "Unauthorized") logout();
+      });
+  }, [api, item, logout]);
+
   const fetchCollections = useCallback(async () => {
     if (!itemID) return;
     setCollectionsLoading(true);
@@ -257,21 +268,32 @@ export default function ItemDetails() {
           <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
             {item.title}
           </h1>
-          {item.authors && item.authors.length > 0 && (
+          {feed && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {item.authors.map((a, i) => (
-                <Badge key={i}>{a.name || a.email}</Badge>
-              ))}
+              {item.authors && item.authors.length > 0 ? (
+                item.authors.map((a, i) => (
+                  <Link key={i} to={`/feeds/${feed.id}`}>
+                    <Badge>{a.name || a.email}</Badge>
+                  </Link>
+                ))
+              ) : (
+                <Link to={`/feeds/${feed.id}`}>
+                  <Badge>{feed.title}</Badge>
+                </Link>
+              )}
             </div>
           )}
           <p className="leading-7 [&:not(:first-child)]:mt-6 text-sm text-gray-500">
             Published:{" "}
-            {item.published_parsed &&
-              new Date(item.published_parsed).toLocaleString()}
-            <br />
-            Updated:{" "}
-            {item.updated_parsed &&
-              new Date(item.updated_parsed).toLocaleString()}
+            {item.published_parsed
+              ? new Date(item.published_parsed).toLocaleString()
+              : "—"}
+            {item.updated_parsed && (
+              <>
+                <br />
+                Updated: {new Date(item.updated_parsed).toLocaleString()}
+              </>
+            )}
           </p>
           <br />
           {item.content && (
@@ -284,7 +306,7 @@ export default function ItemDetails() {
             <div className="mt-6 border-l-2 pl-4 italic">
               <Button asChild variant="link">
                 <a href={item.link} target="_blank" rel="noopener noreferrer">
-                  Read Original Source
+                  Read source
                 </a>
               </Button>
             </div>
