@@ -40,7 +40,7 @@ export default function CategoriesPage() {
   const UI_PAGE_SIZE = 15;
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialNames = searchParams.getAll("names");
+  const initialNames = searchParams.getAll("name");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialNames || [],
   );
@@ -72,7 +72,7 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    selectedCategories.forEach((n) => params.append("names", n));
+    selectedCategories.forEach((n) => params.append("name", n));
     setSearchParams(params, { replace: true });
     setPage(1);
     fetchAllItems();
@@ -124,7 +124,7 @@ export default function CategoriesPage() {
       const all: ItemModel[] = [];
       while (true) {
         const res = await api.categoriesItemsList(
-          { names: selectedCategories, limit: chunkSize, offset },
+          { name: selectedCategories, limit: chunkSize, offset },
           { secure: true, format: "json" },
         );
         const chunk = res.data.items ?? [];

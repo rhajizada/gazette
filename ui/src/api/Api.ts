@@ -69,8 +69,8 @@ export class Api<
    */
   categoriesItemsList = (
     query: {
-      /** Category names */
-      names: string[];
+      /** Category namess */
+      name: string[];
       /** Max number of items */
       limit: number;
       /** Number of items to skip */
