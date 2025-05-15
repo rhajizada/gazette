@@ -19,6 +19,117 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves paginated list of distinct categories.",
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "List categories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max number of categories",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of categories to skip",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListCategoriesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/categories/items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves items in the categories, including like status.",
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "List items in the categories.",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Category names",
+                        "name": "names",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max number of items",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items to skip",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/collections": {
             "get": {
                 "security": [
@@ -26,7 +137,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves paginated collections for the current user.",
+                "description": "Retrieves paginated list of user's collections.",
                 "tags": [
                     "Collections"
                 ],
@@ -317,7 +428,7 @@ const docTemplate = `{
                 "tags": [
                     "Collections"
                 ],
-                "summary": "List items in collection",
+                "summary": "List items in the collection",
                 "parameters": [
                     {
                         "type": "string",
@@ -345,7 +456,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse"
                         }
                     },
                     "400": {
@@ -1349,13 +1460,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse": {
+        "github_com_rhajizada_gazette_internal_service.ListCategoriesResponse": {
             "type": "object",
             "properties": {
-                "items": {
+                "categories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Item"
+                        "type": "string"
                     }
                 },
                 "limit": {

@@ -16,7 +16,7 @@ import {
   GithubComRhajizadaGazetteInternalServiceFeed,
   GithubComRhajizadaGazetteInternalServiceItem,
   GithubComRhajizadaGazetteInternalServiceLikeItemResponse,
-  GithubComRhajizadaGazetteInternalServiceListCollectionItemsResponse,
+  GithubComRhajizadaGazetteInternalServiceListCategoriesResponse,
   GithubComRhajizadaGazetteInternalServiceListCollectionsResponse,
   GithubComRhajizadaGazetteInternalServiceListFeedsResponse,
   GithubComRhajizadaGazetteInternalServiceListItemsResponse,
@@ -31,7 +31,65 @@ export class Api<
   SecurityDataType = unknown,
 > extends HttpClient<SecurityDataType> {
   /**
-   * @description Retrieves paginated collections for the current user.
+   * @description Retrieves paginated list of distinct categories.
+   *
+   * @tags Categories
+   * @name CategoriesList
+   * @summary List categories
+   * @request GET:/api/categories
+   * @secure
+   */
+  categoriesList = (
+    query: {
+      /** Max number of categories */
+      limit: number;
+      /** Number of categories to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListCategoriesResponse,
+      string
+    >({
+      path: `/api/categories`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves items in the categories, including like status.
+   *
+   * @tags Categories
+   * @name CategoriesItemsList
+   * @summary List items in the categories.
+   * @request GET:/api/categories/items
+   * @secure
+   */
+  categoriesItemsList = (
+    query: {
+      /** Category names */
+      names: string[];
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/categories/items`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves paginated list of user's collections.
    *
    * @tags Collections
    * @name CollectionsList
@@ -159,7 +217,7 @@ export class Api<
    *
    * @tags Collections
    * @name CollectionsItemsList
-   * @summary List items in collection
+   * @summary List items in the collection
    * @request GET:/api/collections/{collectionID}/items
    * @secure
    */
@@ -174,7 +232,7 @@ export class Api<
     params: RequestParams = {},
   ) =>
     this.request<
-      GithubComRhajizadaGazetteInternalServiceListCollectionItemsResponse,
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
       string
     >({
       path: `/api/collections/${collectionId}/items`,

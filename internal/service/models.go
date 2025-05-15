@@ -156,17 +156,17 @@ type ListCollectionsResponse struct {
 	Collections []Collection `json:"collections"`
 }
 
-// ListCollectionItemsResponse wraps a paginated list of items in a collection
-type ListCollectionItemsResponse struct {
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
-	TotalCount int64  `json:"total_count"`
-	Items      []Item `json:"items"`
-}
-
 // AddItemToCollectionResponse
 type AddItemToCollectionResponse struct {
 	AddedAt time.Time `json:"added_at"`
+}
+
+// ListCategoriesResponse
+type ListCategoriesResponse struct {
+	Limit      int32    `json:"limit"`
+	Offset     int32    `json:"offset"`
+	TotalCount int64    `json:"total_count"`
+	Categories []string `json:"categories"`
 }
 
 // Person represents an RSS‐feed author for documentation.

@@ -3,6 +3,7 @@ import RequireAuth from "./components/RequireAuth";
 import CallbackPage from "./pages/Callback";
 import SubscribedItems from "./pages/SubscribedItems.tsx";
 import SuggestedItems from "./pages/SuggestedItems.tsx";
+import CategoriesPage from "./pages/Categories.tsx";
 import CollectionDetails from "./pages/CollectionItems.tsx";
 import Collections from "./pages/Collections.tsx";
 import FeedItems from "./pages/FeedItems.tsx";
@@ -23,6 +24,7 @@ export default function App() {
           </RequireAuth>
         }
       />
+      <Route path="/categories" element={<CategoriesPage />} />
       <Route
         path="/collections"
         element={

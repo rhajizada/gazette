@@ -12,9 +12,9 @@ import (
 	"github.com/rhajizada/gazette/internal/service"
 )
 
-// ListCollections returns the user’s collections.
+// ListCollections returns user’s collections.
 // @Summary      List collections
-// @Description  Retrieves paginated collections for the current user.
+// @Description  Retrieves paginated list of user's collections.
 // @Tags         Collections
 // @Param        limit   query     int32  true   "Max number of collections"
 // @Param        offset  query     int32  true   "Number of collections to skip"
@@ -252,14 +252,14 @@ func (h *Handler) RemoveItemFromCollection(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListItemsByCollectionID returns paginated items in a collection.
-// @Summary      List items in collection
+// ListItemsByCollectionID returns paginated list of items in the collection.
+// @Summary      List items in the collection
 // @Description  Retrieves items in the collection, including like status.
 // @Tags         Collections
 // @Param        collectionID  path      string  true   "Collection UUID"
 // @Param        limit         query     int32   true   "Max number of items"
 // @Param        offset        query     int32   true   "Number of items to skip"
-// @Success      200           {object}  service.ListCollectionItemsResponse
+// @Success      200           {object}  service.ListItemsResponse
 // @Failure      400           {object}  string
 // @Failure      500           {object}  string
 // @Security     BearerAuth
@@ -278,7 +278,7 @@ func (h *Handler) ListItemsByCollectionID(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var resp *service.ListCollectionItemsResponse
+	var resp *service.ListItemsResponse
 
 	resp, err = h.Service.ListCollectionItems(r.Context(), service.ListCollectionItemsRequest{
 		UserID: userID,
