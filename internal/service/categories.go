@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/rhajizada/gazette/internal/repository"
@@ -48,7 +47,6 @@ func (s *Service) ListCategories(ctx context.Context, r repository.ListDistinctC
 
 // ListCategoryItems retrieves a paginated list of items that are in given category
 func (s *Service) ListCategoryItems(ctx context.Context, r repository.ListItemsByCategoryForUserParams) (*ListItemsResponse, error) {
-	log.Printf("Got categories: %v", r.Categories)
 	total, err := s.Repo.CountItemsByCategoryForUser(ctx, r.Categories)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
