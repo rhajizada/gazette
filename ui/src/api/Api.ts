@@ -480,7 +480,10 @@ export class Api<
     },
     params: RequestParams = {},
   ) =>
-    this.request<GithubComRhajizadaGazetteInternalServiceItem, string>({
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
       path: `/api/items/${itemId}/similiar`,
       method: "GET",
       query: query,

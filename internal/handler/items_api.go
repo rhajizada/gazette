@@ -97,7 +97,7 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 // @Param        itemID  path      string  true  "Item UUID"
 // @Param        limit   query     int32   true  "Max number of items"
 // @Param        offset  query     int32   true  "Number of items to skip"
-// @Success      200     {object}  service.Item
+// @Success      200     {object}  service.ListItemsResponse
 // @Failure      400     {object}  string
 // @Failure      404     {object}  string
 // @Failure      500     {object}  string

@@ -1014,7 +1014,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Item"
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse"
                         }
                     },
                     "400": {
