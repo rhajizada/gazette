@@ -88,8 +88,8 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "multi",
-                        "description": "Category names",
-                        "name": "names",
+                        "description": "Category namess",
+                        "name": "name",
                         "in": "query",
                         "required": true
                     },

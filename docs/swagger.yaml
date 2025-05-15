@@ -248,11 +248,11 @@ paths:
       description: Retrieves items in the categories, including like status.
       parameters:
       - collectionFormat: multi
-        description: Category names
+        description: Category namess
         in: query
         items:
           type: string
-        name: names
+        name: name
         required: true
         type: array
       - description: Max number of items

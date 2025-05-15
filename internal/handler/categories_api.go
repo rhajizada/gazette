@@ -57,7 +57,7 @@ func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
 // @Summary      List items in the categories.
 // @Description  Retrieves items in the categories, including like status.
 // @Tags         Categories
-// @Param        names   query     []string   true   "Category names"  collectionFormat(multi)
+// @Param        name   query     []string   true   "Category namess"  collectionFormat(multi)
 // @Param        limit        query     int32      true   "Max number of items"
 // @Param        offset       query     int32      true   "Number of items to skip"
 // @Success      200          {object}  service.ListItemsResponse
@@ -69,7 +69,7 @@ func (h *Handler) ListItemsByCategories(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.GetUserClaims(r).UserID
 
 	// collect all "categories" params into a []string
-	categories := r.URL.Query()["names"]
+	categories := r.URL.Query()["name"]
 	if len(categories) == 0 {
 		http.Error(w, "bad input: missing categories", http.StatusBadRequest)
 		return
