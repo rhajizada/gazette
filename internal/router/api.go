@@ -9,6 +9,8 @@ import (
 
 func RegisterAPI(h *handler.Handler) *http.ServeMux {
 	router := http.NewServeMux()
+	router.HandleFunc("GET /categories", h.ListCategories)
+	router.HandleFunc("GET /categories/items", h.ListItemsByCategories)
 	router.HandleFunc("GET /collections", h.ListCollections)
 	router.HandleFunc("POST /collections", h.CreateCollection)
 	router.HandleFunc("GET /collections/{collectionID}", h.GetCollectionByID)

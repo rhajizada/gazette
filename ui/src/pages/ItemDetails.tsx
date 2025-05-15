@@ -339,7 +339,9 @@ export default function ItemDetails() {
               <br />
               <div className="flex flex-wrap gap-2">
                 {item.categories.slice(0, 3).map((cat) => (
-                  <Badge key={cat}>{cat}</Badge>
+                  <Link to={`/categories?names=${encodeURIComponent(cat)}`}>
+                    <Badge key={cat}>{cat}</Badge>
+                  </Link>
                 ))}
               </div>
             </div>
