@@ -32,6 +32,7 @@ tasks:
       - |
         docker build \
          --build-arg VERSION={{.version}} \
+         --platform linux/amd64 \
          -f docker/{{.app}}/Dockerfile \
          -t {{.name}}-{{.app}} \
          .
@@ -43,7 +44,9 @@ tasks:
       - build-image
     vars:
       app: '{{.app | default "server"}}'
-      tag: '{{.tag | default "latest"}}'
+      version:
+        sh: git rev-parse --short HEAD
+      tag: "{{.tag | default .version}}"
     requires:
       vars:
         - DOCKER_REGISTRY_URL
@@ -55,6 +58,19 @@ tasks:
         docker tag {{.name}}-{{.app}} {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
         docker push {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
     dir: ./
+
+  push:
+    desc: Build and push all images
+    requires:
+      vars:
+        - DOCKER_REGISTRY_URL
+    cmds:
+      - task: push-image
+        vars: { app: "server" }
+      - task: push-image
+        vars: { app: "worker" }
+      - task: push-image
+        vars: { app: "scheduler" }
 
   compose:
     desc: Docker compose
