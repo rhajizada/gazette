@@ -1,13 +1,26 @@
 import { Footer } from "@/components/Footer";
+import { LikedItems } from "@/components/LikedItems";
 import { Navbar } from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
+import { SubscribedFeeds } from "@/components/SubscribedFeeds";
 import { Spinner } from "@/components/ui/spinner";
-import { LogOut as LogOutIcon, User as UserIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserProfile } from "@/components/UserProfile";
+import {
+  Heart as HeartIcon,
+  Rss as RssIcon,
+  User as UserIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceUser as UserModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
+
+const tabs = [
+  { name: "Profile", value: "profile", icon: UserIcon },
+  { name: "Subscribed feeds", value: "subscribed", icon: RssIcon },
+  { name: "Liked items", value: "liked", icon: HeartIcon },
+];
 
 export default function UserPage() {
   const { api, logout } = useAuth();
@@ -22,13 +35,12 @@ export default function UserPage() {
       .userList({ format: "json" })
       .then((res) => setUser(res.data))
       .catch((err) => {
-        setError("Failed to load user data.");
         if (err.error === "Unauthorized") {
           logout();
           navigate("/login", { replace: true });
         } else {
-          const message = err.text();
-          toast.error(message || "failed to fetch user");
+          toast.error(err.text() || "Failed to fetch user");
+          setError("Failed to load user data.");
         }
       })
       .finally(() => setLoading(false));
@@ -61,46 +73,44 @@ export default function UserPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 mx-auto max-w-md px-6 py-8">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center">
-            {user.name ? (
-              <span className="text-3xl font-bold text-gray-600">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            ) : (
-              <UserIcon className="w-12 h-12 text-gray-500" />
-            )}
-          </div>
-          <h1 className="text-2xl font-extrabold text-gray-900">
-            {user.name || "Unnamed User"}
-          </h1>
-          <p className="text-gray-600">{user.email}</p>
-          <div className="w-full border-t" />
-          <div className="w-full space-y-2">
-            <p>
-              <span className="font-medium">User ID:</span> {user.id}
-            </p>
-            <p>
-              <span className="font-medium">Joined:</span>{" "}
-              {user.createdAt && new Date(user.createdAt).toLocaleDateString()}
-            </p>
-            <p>
-              <span className="font-medium">Last Updated:</span>{" "}
-              {user.lastUpdatedAt &&
-                new Date(user.lastUpdatedAt).toLocaleDateString()}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={logout}
-            className="flex items-center mt-4"
-          >
-            <LogOutIcon className="w-4 h-4 mr-2" /> Logout
-          </Button>
+
+      <main className="flex-1 bg-gray-50 py-6">
+        <div className="container mx-auto px-4">
+          <Tabs defaultValue="profile" className="w-full">
+            {/* Responsive tab list: icons only on small, text+icon on sm+ */}
+            <TabsList className="flex w-full bg-white rounded-t-lg shadow-sm overflow-hidden">
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="flex-1 flex items-center justify-center gap-1 py-3 px-3 sm:py-4 sm:px-6
+                             text-sm sm:text-lg font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50
+                             data-[state=active]:text-gray-900 data-[state=active]:border-b-4
+                             data-[state=active]:border-primary bg-transparent"
+                >
+                  <tab.icon className="h-6 w-6" />
+                  <span className="hidden sm:inline">{tab.name}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <div className="bg-white rounded-b-lg shadow-sm p-6">
+              <TabsContent value="profile">
+                <UserProfile user={user!} onLogout={logout} />
+              </TabsContent>
+
+              <TabsContent value="subscribed">
+                <SubscribedFeeds />
+              </TabsContent>
+
+              <TabsContent value="liked">
+                <LikedItems />
+              </TabsContent>
+            </div>
+          </Tabs>
         </div>
       </main>
+
       <Footer />
     </div>
   );
