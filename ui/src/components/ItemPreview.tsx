@@ -97,11 +97,25 @@ export function ItemPreview({ item }: ItemPreviewProps) {
               />
             )}
 
-            {item.authors && item.authors?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {item.authors.map((a, i) => (
+            {item
+              .authors!.filter(
+                (a) => (a.name && a.name.trim()) || (a.email && a.email.trim()),
+              )
+              .map((a, i) =>
+                a.name || a.email ? (
                   <Badge key={i}>{a.name || a.email}</Badge>
-                ))}
+                ) : null,
+              )
+              .filter(Boolean).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {item
+                  .authors!.filter(
+                    (a) =>
+                      (a.name && a.name.trim()) || (a.email && a.email.trim()),
+                  )
+                  .map((a, i) => (
+                    <Badge key={i}>{a.name || a.email}</Badge>
+                  ))}
               </div>
             )}
           </div>
