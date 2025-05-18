@@ -270,13 +270,13 @@ export default function ItemDetails() {
           </h1>
           {feed && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {item.authors!.filter(
+              {(item.authors ?? []).filter(
                 (a) =>
                   (a.name?.trim().length ?? 0) > 0 ||
                   (a.email?.trim().length ?? 0) > 0,
               ).length > 0 ? (
-                item
-                  .authors!.filter(
+                (item.authors ?? [])
+                  .filter(
                     (a) =>
                       (a.name?.trim().length ?? 0) > 0 ||
                       (a.email?.trim().length ?? 0) > 0,
@@ -308,8 +308,8 @@ export default function ItemDetails() {
           <br />
           {item.content && (
             <div
-              className="mt-6 leading-7 max-w-prose mx-auto"
-              dangerouslySetInnerHTML={{ __html: item.content }}
+              className="mt-6 leading-7 max-w-prose mx-auto overflow-x-auto break-words [&_img,&_video,&_iframe]:max-w-full [&_img,&_video,&_iframe]:h-auto"
+              dangerouslySetInnerHTML={{ __html: item.content! }}
             />
           )}
           {item.link && (
