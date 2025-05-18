@@ -32,7 +32,11 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full bg-background border-b">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center">
-          <img src="/logo512.png" alt="Gazette" className="h-8 w-8 mr-2" />
+          <img
+            src="/assets/gazette-512.png"
+            alt="Gazette"
+            className="h-8 w-8 mr-2"
+          />
           <span className="text-2xl font-bold">Gazette</span>
         </Link>
 
