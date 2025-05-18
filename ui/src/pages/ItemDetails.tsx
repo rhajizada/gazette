@@ -270,12 +270,22 @@ export default function ItemDetails() {
           </h1>
           {feed && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {item.authors && item.authors.length > 0 ? (
-                item.authors.map((a, i) => (
-                  <Link key={i} to={`/feeds/${feed.id}`}>
-                    <Badge>{a.name || a.email}</Badge>
-                  </Link>
-                ))
+              {item.authors!.filter(
+                (a) =>
+                  (a.name?.trim().length ?? 0) > 0 ||
+                  (a.email?.trim().length ?? 0) > 0,
+              ).length > 0 ? (
+                item
+                  .authors!.filter(
+                    (a) =>
+                      (a.name?.trim().length ?? 0) > 0 ||
+                      (a.email?.trim().length ?? 0) > 0,
+                  )
+                  .map((a, i) => (
+                    <Link key={i} to={`/feeds/${feed.id}`}>
+                      <Badge>{a.name || a.email}</Badge>
+                    </Link>
+                  ))
               ) : (
                 <Link to={`/feeds/${feed.id}`}>
                   <Badge>{feed.title}</Badge>
