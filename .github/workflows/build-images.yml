@@ -58,7 +58,7 @@ jobs:
       - name: Build and push ${{ matrix.app }}
         uses: docker/build-push-action@v6
         with:
-          context: ./docker/${{ matrix.app }}
+          context: .
           file: ./docker/${{ matrix.app }}/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
