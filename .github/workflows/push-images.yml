@@ -32,7 +32,7 @@ jobs:
     strategy:
       matrix:
         app: [server, worker, scheduler]
-    uses: ./.gitea/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml
     secrets: inherit
     with:
       app: ${{ matrix.app }}
