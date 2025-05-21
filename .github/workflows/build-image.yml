@@ -41,7 +41,6 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .
           file: ./docker/${{ inputs.app }}
           push: ${{ inputs.push }}
           tags: ghcr.io/${{ github.repository }}/${{ inputs.app }}:${{ inputs.tag }}
