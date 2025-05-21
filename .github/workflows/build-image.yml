@@ -1,4 +1,5 @@
-name: Build '${{ inputs.app }}' image
+name: Build image
+run-name: Build ${{ inputs.app }}:${{ inputs.tag }} image
 
 on:
   workflow_call:
