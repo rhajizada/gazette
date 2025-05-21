@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   docker:
-    name: Build ${{ matrix.app }}
+    name: Build ${{ matrix.app }} image
     runs-on: ubuntu-latest
 
     strategy:
@@ -58,6 +58,7 @@ jobs:
       - name: Build and push ${{ matrix.app }}
         uses: docker/build-push-action@v6
         with:
+          push: true
           context: .
           file: ./docker/${{ matrix.app }}/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
