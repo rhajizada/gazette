@@ -32,8 +32,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            name/${{ matrix.app }}
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.app }}
+            gazette/${{ matrix.app }}
+            ghcr.io/${{ github.repository }}/${{ matrix.app }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -60,6 +60,5 @@ jobs:
         with:
           context: .
           file: ./docker/${{ matrix.app }}/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
