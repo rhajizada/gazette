@@ -123,6 +123,43 @@ func (q *Queries) DeleteFeedByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const exportFeedsByUserID = `-- name: ExportFeedsByUserID :many
+SELECT
+  f.feed_link
+FROM feeds f
+LEFT JOIN user_feeds uf
+  ON uf.feed_id = f.id
+  AND uf.user_id = $1
+WHERE
+  (NOT $2) OR (uf.user_id IS NOT NULL)
+ORDER BY f.created_at DESC
+`
+
+type ExportFeedsByUserIDParams struct {
+	UserID  uuid.UUID   `json:"userId"`
+	Column2 interface{} `json:"column2"`
+}
+
+func (q *Queries) ExportFeedsByUserID(ctx context.Context, arg ExportFeedsByUserIDParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, exportFeedsByUserID, arg.UserID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var feed_link string
+		if err := rows.Scan(&feed_link); err != nil {
+			return nil, err
+		}
+		items = append(items, feed_link)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getFeedByFeedLink = `-- name: GetFeedByFeedLink :one
 SELECT
   id, title, description, link, feed_link, links, updated_parsed, published_parsed,

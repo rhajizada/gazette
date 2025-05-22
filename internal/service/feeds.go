@@ -97,6 +97,28 @@ func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeeds
 	}, nil
 }
 
+// ExportFeeds returns list of feed URLs, optionally only subscribed.
+func (s *Service) ExportFeeds(ctx context.Context, r ExportFeedsRequest) ([]string, error) {
+	var feeds []string
+	var err error
+	feeds, err = s.Repo.ExportFeedsByUserID(ctx, repository.ExportFeedsByUserIDParams{
+		UserID:  r.UserID,
+		Column2: r.SubscbedOnly,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			feeds = make([]string, 0)
+		} else {
+			return nil, NewError(
+				"failed to export feeds",
+				http.StatusInternalServerError,
+			)
+		}
+	}
+
+	return feeds, nil
+}
+
 // CreateFeed creates a feed if needed, enqueues a sync task, and subscribes the user.
 func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, error) {
 	parser := gofeed.NewParser()

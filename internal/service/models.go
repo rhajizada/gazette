@@ -15,6 +15,12 @@ type ListFeedsRequest struct {
 	Limit        int32
 }
 
+// ExportFeedsRequest wraps parameters for exporting feeds.
+type ExportFeedsRequest struct {
+	UserID       uuid.UUID
+	SubscbedOnly bool
+}
+
 // CreateFeedRequest wraps parameters to create or subscribe to a feed.
 type CreateFeedRequest struct {
 	FeedURL string
