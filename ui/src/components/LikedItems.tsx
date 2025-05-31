@@ -11,9 +11,10 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
+
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
 
@@ -28,6 +29,7 @@ const labelMap: Record<SortKey, string> = {
 
 export function LikedItems() {
   const { api, logout } = useAuth();
+
   const [allItems, setAllItems] = useState<ItemModel[]>([]);
   const [preloading, setPreloading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,21 +52,23 @@ export function LikedItems() {
 
         const total = first.data.total_count ?? 0;
         let acc = first.data.items ?? [];
-        setAllItems(acc.slice(0, total));
+        acc = acc.slice(0, total);
+        setAllItems(acc);
 
         let offset = CHUNK_SIZE;
         while (!cancelled && acc.length < total) {
-          const res = await api.itemsList(
+          const nextRes = await api.itemsList(
             { limit: CHUNK_SIZE, offset },
             { secure: true, format: "json" },
           );
           if (cancelled) break;
 
-          const next = res.data.items ?? [];
-          if (!next.length) break;
+          const nextItems = nextRes.data.items ?? [];
+          if (nextItems.length === 0) break;
 
-          acc = acc.concat(next).slice(0, total);
+          acc = acc.concat(nextItems).slice(0, total);
           setAllItems(acc);
+
           offset += CHUNK_SIZE;
         }
       } catch (err: any) {
@@ -86,7 +90,35 @@ export function LikedItems() {
     };
   }, [api, logout]);
 
-  if (error) return <Navigate to="/*" replace />;
+  if (error) {
+    return <Navigate to="/*" replace />;
+  }
+
+  const handleUnlike = useCallback(
+    async (itemId: string) => {
+      try {
+        await api.itemsLikeDelete(itemId, { secure: true, format: "json" });
+        setAllItems((prevItems) => {
+          const filtered = prevItems.filter(
+            (it: ItemModel) => it.id !== itemId,
+          );
+          const newTotalPages = Math.ceil(filtered.length / PAGE_SIZE);
+          if (page > newTotalPages && newTotalPages > 0) {
+            setPage(newTotalPages);
+          }
+          return filtered;
+        });
+      } catch (err: any) {
+        if (err.error === "Unauthorized") {
+          logout();
+        } else {
+          const msg = err.text?.() ?? "failed to unlike item";
+          toast.error(msg);
+        }
+      }
+    },
+    [api, logout, page],
+  );
 
   const processed = allItems
     .filter((it) =>
@@ -113,11 +145,12 @@ export function LikedItems() {
   const totalPages = Math.ceil(processed.length / PAGE_SIZE);
   const paginated = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // build pages array
   const pagesArr: (number | "ellipsis")[] = [];
   if (totalPages > 0) {
     pagesArr.push(1);
+
     if (page > 3) pagesArr.push("ellipsis");
+
     for (
       let p = Math.max(2, page - 2);
       p <= Math.min(totalPages - 1, page + 2);
@@ -125,6 +158,7 @@ export function LikedItems() {
     ) {
       pagesArr.push(p);
     }
+
     if (page < totalPages - 2) pagesArr.push("ellipsis");
     if (totalPages > 1) pagesArr.push(totalPages);
   }
@@ -145,12 +179,14 @@ export function LikedItems() {
           variant="outline"
           size="sm"
           onClick={() => {
-            if (sortKey === "title" && sortAsc) setSortAsc(false);
-            else if (sortKey === "title") {
+            if (sortKey === "title" && sortAsc) {
+              setSortAsc(false);
+            } else if (sortKey === "title") {
               setSortKey("published_parsed");
               setSortAsc(true);
-            } else if (sortAsc) setSortAsc(false);
-            else {
+            } else if (sortAsc) {
+              setSortAsc(false);
+            } else {
               setSortKey("title");
               setSortAsc(true);
             }
@@ -170,7 +206,11 @@ export function LikedItems() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {paginated.map((item) => (
-            <ItemPreview key={item.id} item={item} />
+            <ItemPreview
+              key={item.id!}
+              item={item}
+              onUnlike={() => handleUnlike(item.id!)}
+            />
           ))}
         </div>
       )}
@@ -185,9 +225,9 @@ export function LikedItems() {
                   aria-disabled={page === 1}
                 />
               </PaginationItem>
-              {pagesArr.map((p, i) =>
+              {pagesArr.map((p, idx) =>
                 p === "ellipsis" ? (
-                  <PaginationItem key={`e${i}`}>
+                  <PaginationItem key={`e-${idx}`}>
                     <PaginationEllipsis />
                   </PaginationItem>
                 ) : (

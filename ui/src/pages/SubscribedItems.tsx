@@ -3,6 +3,7 @@ import { ItemPreview } from "@/components/ItemPreview";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Pagination,
   PaginationContent,
@@ -24,6 +25,8 @@ export default function SubscribedItems() {
   const CHUNK_SIZE = 100;
 
   const [allItems, setAllItems] = React.useState<ItemModel[]>([]);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [loadedCount, setLoadedCount] = React.useState(0);
   const [preloading, setPreloading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -49,11 +52,15 @@ export default function SubscribedItems() {
         if (cancelled) return;
 
         const total = first.data.total_count ?? 0;
+        setTotalCount(total);
+
         let acc = first.data.items ?? [];
         setAllItems(acc.slice(0, total));
+        setLoadedCount(acc.length);
 
         let offset = CHUNK_SIZE;
-        while (!cancelled && acc.length < total) {
+        const pages = Math.ceil(total / CHUNK_SIZE);
+        for (let p = 2; p <= pages && !cancelled; p++) {
           const res = await api.subscribedList(
             { limit: CHUNK_SIZE, offset },
             { secure: true, format: "json" },
@@ -65,6 +72,7 @@ export default function SubscribedItems() {
 
           acc = acc.concat(next).slice(0, total);
           setAllItems(acc);
+          setLoadedCount(acc.length);
 
           offset += CHUNK_SIZE;
         }
@@ -163,6 +171,22 @@ export default function SubscribedItems() {
               sort by {labelMap[sortKey]} {sortAsc ? "↑" : "↓"}
             </Button>
           </div>
+
+          {preloading && (
+            <div className="mb-8">
+              <Progress
+                value={
+                  totalCount > 0
+                    ? Math.round((loadedCount / totalCount) * 100)
+                    : 0
+                }
+                className="w-full"
+              />
+              <p className="mt-1 text-sm text-gray-600">
+                Loading ({loadedCount}/{totalCount})
+              </p>
+            </div>
+          )}
 
           {!preloading && (
             <>

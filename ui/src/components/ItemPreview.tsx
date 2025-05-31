@@ -12,9 +12,10 @@ const MIN_HEIGHT = 100;
 
 interface ItemPreviewProps {
   item: ItemModel;
+  onUnlike?: () => Promise<void>;
 }
 
-export function ItemPreview({ item }: ItemPreviewProps) {
+export function ItemPreview({ item, onUnlike }: ItemPreviewProps) {
   const { api, logout } = useAuth();
   const [liked, setLiked] = useState<boolean>(item.liked ?? false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -25,15 +26,19 @@ export function ItemPreview({ item }: ItemPreviewProps) {
     setLoading(true);
     try {
       if (liked) {
-        await api.itemsLikeDelete(item.id!, { format: "json" });
-        setLiked(false);
+        if (onUnlike) {
+          await onUnlike();
+          setLiked(false);
+        } else {
+          await api.itemsLikeDelete(item.id!, { format: "json" });
+          setLiked(false);
+        }
+        toast.success("removed from liked items");
       } else {
         await api.itemsLikeCreate(item.id!, { format: "json" });
         setLiked(true);
+        toast.success("added to liked items");
       }
-      toast.success(
-        liked ? "removed from liked items" : "added to liked items",
-      );
     } catch (err: any) {
       if (err.error === "Unauthorized") logout();
       else {
