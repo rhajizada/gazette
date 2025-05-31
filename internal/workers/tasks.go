@@ -11,6 +11,7 @@ const (
 	TypeSyncData  = "sync:data"
 	TypeSyncFeed  = "sync:feed"
 	TypeEmbedItem = "embed:item"
+	TypeEmbedUser = "embed:user"
 )
 
 type SyncFeedPayload struct {
@@ -19,6 +20,10 @@ type SyncFeedPayload struct {
 
 type EmbedItemPayload struct {
 	ItemID uuid.UUID
+}
+
+type EmbedUserPayload struct {
+	UserID uuid.UUID
 }
 
 func NewSyncDataTask() (*asynq.Task, error) {
@@ -39,4 +44,12 @@ func NewEmbedItemTask(itemID uuid.UUID) (*asynq.Task, error) {
 		return nil, err
 	}
 	return asynq.NewTask(TypeEmbedItem, payload), nil
+}
+
+func NewEmbedUserTask(userID uuid.UUID) (*asynq.Task, error) {
+	payload, err := json.Marshal(EmbedUserPayload{UserID: userID})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeEmbedUser, payload), nil
 }

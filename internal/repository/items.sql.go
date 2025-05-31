@@ -41,6 +41,27 @@ func (q *Queries) CountLikedItems(ctx context.Context, userID uuid.UUID) (int64,
 	return count, err
 }
 
+const countSimilarItemsByItemID = `-- name: CountSimilarItemsByItemID :one
+SELECT COUNT(*) AS similar_count
+FROM (
+  SELECT
+    e.item_id
+  FROM item_embeddings ie
+  JOIN item_embeddings e
+    ON e.item_id <> ie.item_id
+  WHERE ie.item_id = $1
+  GROUP BY e.item_id
+  HAVING MIN(e.embedding <#> ie.embedding) <= 0.15
+) AS sims
+`
+
+func (q *Queries) CountSimilarItemsByItemID(ctx context.Context, itemID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSimilarItemsByItemID, itemID)
+	var similar_count int64
+	err := row.Scan(&similar_count)
+	return similar_count, err
+}
+
 const createItem = `-- name: CreateItem :one
 INSERT INTO items
   (feed_id, title, description, content, link, links, updated_parsed, published_parsed,
@@ -309,6 +330,118 @@ func (q *Queries) ListItemsByFeedIDForUser(ctx context.Context, arg ListItemsByF
 	var items []ListItemsByFeedIDForUserRow
 	for rows.Next() {
 		var i ListItemsByFeedIDForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedID,
+			&i.Title,
+			&i.Description,
+			&i.Content,
+			&i.Link,
+			&i.Links,
+			&i.UpdatedParsed,
+			&i.PublishedParsed,
+			&i.Authors,
+			&i.Guid,
+			&i.Image,
+			&i.Categories,
+			&i.Enclosures,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Liked,
+			&i.LikedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSimilarItemsByItemIDForUser = `-- name: ListSimilarItemsByItemIDForUser :many
+SELECT
+  it.id,
+  it.feed_id,
+  it.title,
+  it.description,
+  it.content,
+  it.link,
+  it.links,
+  it.updated_parsed,
+  it.published_parsed,
+  it.authors,
+  it.guid,
+  it.image,
+  it.categories,
+  it.enclosures,
+  it.created_at,
+  it.updated_at,
+  (ul.user_id IS NOT NULL) AS liked,
+  ul.liked_at
+FROM (
+  SELECT
+    e.item_id
+  FROM item_embeddings ie
+  JOIN item_embeddings e
+    ON e.item_id <> ie.item_id
+  WHERE ie.item_id = $1
+  GROUP BY e.item_id
+  HAVING MIN(e.embedding <#> ie.embedding) <= 0.15
+  ORDER BY MIN(e.embedding <#> ie.embedding) ASC
+  LIMIT  $3
+  OFFSET $4
+) AS sims
+JOIN items it
+  ON it.id = sims.item_id
+LEFT JOIN user_likes ul
+  ON ul.user_id = $2
+  AND ul.item_id = it.id
+`
+
+type ListSimilarItemsByItemIDForUserParams struct {
+	ItemID uuid.UUID `json:"itemId"`
+	UserID uuid.UUID `json:"userId"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type ListSimilarItemsByItemIDForUserRow struct {
+	ID              uuid.UUID          `json:"id"`
+	FeedID          uuid.UUID          `json:"feedId"`
+	Title           *string            `json:"title"`
+	Description     *string            `json:"description"`
+	Content         *string            `json:"content"`
+	Link            string             `json:"link"`
+	Links           []string           `json:"links"`
+	UpdatedParsed   *time.Time         `json:"updatedParsed"`
+	PublishedParsed *time.Time         `json:"publishedParsed"`
+	Authors         typeext.Authors    `json:"authors"`
+	Guid            *string            `json:"guid"`
+	Image           *gofeed.Image      `json:"image"`
+	Categories      []string           `json:"categories"`
+	Enclosures      typeext.Enclosures `json:"enclosures"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
+	Liked           interface{}        `json:"liked"`
+	LikedAt         *time.Time         `json:"likedAt"`
+}
+
+func (q *Queries) ListSimilarItemsByItemIDForUser(ctx context.Context, arg ListSimilarItemsByItemIDForUserParams) ([]ListSimilarItemsByItemIDForUserRow, error) {
+	rows, err := q.db.Query(ctx, listSimilarItemsByItemIDForUser,
+		arg.ItemID,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSimilarItemsByItemIDForUserRow
+	for rows.Next() {
+		var i ListSimilarItemsByItemIDForUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.FeedID,
