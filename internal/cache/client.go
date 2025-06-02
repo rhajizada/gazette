@@ -17,6 +17,8 @@ type Cache struct {
 	rdb *redis.Client
 }
 
+// New creates a new Cache instance connected to Redis.
+// It returns an error if the Redis client cannot ping the server.
 func New(conf *config.CacheConfig) (*Cache, error) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     conf.Addr,
@@ -29,6 +31,9 @@ func New(conf *config.CacheConfig) (*Cache, error) {
 	return &Cache{rdb: rdb}, nil
 }
 
+// StoreUserSuggestions replaces all existing suggestions for a user.
+// It writes each SuggestedItem into a Redis hash under "user:suggestions:<userID>".
+// If ttl > 0, the hash key is set to expire after the given duration.
 func (s *Cache) StoreUserSuggestions(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -65,6 +70,8 @@ func (s *Cache) StoreUserSuggestions(
 	return nil
 }
 
+// GetUserSuggestions retrieves all suggested items for a user.
+// It returns a slice of SuggestedItem sorted by Score in descending order.
 func (s *Cache) GetUserSuggestions(ctx context.Context, userID uuid.UUID) ([]SuggestedItem, error) {
 	key := fmt.Sprintf("user:suggestions:%s", userID.String())
 	rawMap, err := s.rdb.HGetAll(ctx, key).Result()
@@ -101,4 +108,15 @@ func (s *Cache) GetUserSuggestions(ctx context.Context, userID uuid.UUID) ([]Sug
 	})
 
 	return result, nil
+}
+
+// RemoveUserSuggestion deletes a single SuggestedItem entry from the Redis hash
+// "user:suggestions:<userID>" given the user ID and item ID.
+// If the field does not exist, no error is returned.
+func (s *Cache) RemoveUserSuggestion(ctx context.Context, userID uuid.UUID, itemID uuid.UUID) error {
+	key := fmt.Sprintf("user:suggestions:%s", userID.String())
+	if err := s.rdb.HDel(ctx, key, itemID.String()).Err(); err != nil {
+		return fmt.Errorf("redis HDel for key %q, field %q: %w", key, itemID.String(), err)
+	}
+	return nil
 }

@@ -9,9 +9,11 @@ FROM (
     AND NOT EXISTS (
       SELECT 1
       FROM user_likes ul
-      WHERE ul.user_id = $1 AND ul.item_id = i.id
+      WHERE ul.user_id = $1
+        AND ul.item_id = i.id
     )
   GROUP BY i.id
+  HAVING (1.0 - MIN(e.embedding <=> c.centroid)) > 0.8
 ) AS suggestions;
 
 -- name: ListSuggestedItemsByUser :many
@@ -51,7 +53,8 @@ WHERE i.published_parsed >= NOW() - INTERVAL '90 days'
   AND NOT EXISTS (
     SELECT 1
     FROM user_likes ul
-    WHERE ul.user_id = $1 AND ul.item_id = i.id
+    WHERE ul.user_id = $1
+      AND ul.item_id = i.id
   )
 GROUP BY
   i.id,
@@ -70,6 +73,7 @@ GROUP BY
   i.enclosures,
   i.created_at,
   i.updated_at
+HAVING (1.0 - MIN(e.embedding <=> c.centroid)) > 0.8
 ORDER BY score DESC
 LIMIT  $2
 OFFSET $3;
@@ -96,7 +100,8 @@ WHERE i.published_parsed >= NOW() - INTERVAL '90 days'
   AND NOT EXISTS (
     SELECT 1
     FROM user_likes ul
-    WHERE ul.user_id = $1 AND ul.item_id = i.id
+    WHERE ul.user_id = $1
+      AND ul.item_id = i.id
   )
 GROUP BY
   i.id,
@@ -115,4 +120,6 @@ GROUP BY
   i.enclosures,
   i.created_at,
   i.updated_at
+HAVING (1.0 - MIN(e.embedding <=> c.centroid)) > 0.8
 ORDER BY score DESC;
+

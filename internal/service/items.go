@@ -236,6 +236,11 @@ func (s *Service) LikeItem(ctx context.Context, r repository.CreateUserLikeParam
 		log.Printf("failed to queue embed task for user %s: %v", r.UserID, err)
 	}
 
+	err = s.Cache.RemoveUserSuggestion(ctx, r.UserID, r.ItemID)
+	if err != nil {
+		log.Printf("warning: failed to remove %s from user suggested items cache", r.ItemID)
+	}
+
 	return &LikeItemResponse{LikedAt: like.LikedAt}, nil
 }
 
