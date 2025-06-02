@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedType } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,7 +16,6 @@ interface FeedProps {
 }
 
 export function FeedPreview({ feed }: FeedProps) {
-  const navigate = useNavigate();
   const { api, logout } = useAuth();
   const [subscribed, setSubscribed] = useState(feed.subscribed ?? false);
   const [loading, setLoading] = useState(false);
@@ -59,22 +58,16 @@ export function FeedPreview({ feed }: FeedProps) {
     }
   };
 
-  const handleCardClick = () => {
-    if (feed.id) navigate(`/feeds/${feed.id}`);
-  };
-
   return (
-    <Card
-      onClick={handleCardClick}
-      className="group flex flex-col h-full overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer"
-    >
-      <CardContent className="flex-1 relative pt-4 px-4 pb-2">
-        <>
-          {showImage && (
-            <img
-              src={feed.image.url}
-              alt={feed.image.title ?? feed.title}
-              className="
+    <Card className="group flex flex-col h-full overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer">
+      <Link to={`/feeds/${feed.id}`}>
+        <CardContent className="flex-1 relative pt-4 px-4 pb-2">
+          <>
+            {showImage && (
+              <img
+                src={feed.image.url}
+                alt={feed.image.title ?? feed.title}
+                className="
             float-left
             mr-6
             mb-6
@@ -82,40 +75,41 @@ export function FeedPreview({ feed }: FeedProps) {
             max-w-[33.333%]
             h-auto
           "
-            />
+              />
+            )}
+          </>
+
+          <h3 className="text-lg font-bold text-gray-900 hover:text-primary transition-colors">
+            {feed.title}
+          </h3>
+
+          {feed.description && (
+            <p className="text-gray-700 leading-relaxed mt-2">
+              {feed.description}
+            </p>
           )}
-        </>
 
-        <h3 className="text-lg font-bold text-gray-900 hover:text-primary transition-colors">
-          {feed.title}
-        </h3>
-
-        {feed.description && (
-          <p className="text-gray-700 leading-relaxed mt-2">
-            {feed.description}
-          </p>
-        )}
-
-        <div className="flex flex-wrap gap-2 mt-4 clear-left">
-          {feed.categories?.slice(0, 3).map((cat, _) => <Badge>{cat}</Badge>)}
-        </div>
-        {feed.authors && feed.authors.length > 0 && (
-          <p className="text-sm text-gray-500 mt-2">
-            <strong>Author{feed.authors.length > 1 ? "s" : ""}:</strong>{" "}
-            {feed.authors.map((a) => a.name || a.email).join(", ")}
-          </p>
-        )}
-        {feed.language && (
+          <div className="flex flex-wrap gap-2 mt-4 clear-left">
+            {feed.categories?.slice(0, 3).map((cat, _) => <Badge>{cat}</Badge>)}
+          </div>
+          {feed.authors && feed.authors.length > 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              <strong>Author{feed.authors.length > 1 ? "s" : ""}:</strong>{" "}
+              {feed.authors.map((a) => a.name || a.email).join(", ")}
+            </p>
+          )}
+          {feed.language && (
+            <p className="text-sm text-gray-500 mt-1">
+              <strong>Language:</strong> {feed.language}
+            </p>
+          )}
           <p className="text-sm text-gray-500 mt-1">
-            <strong>Language:</strong> {feed.language}
+            <strong>Last updated:</strong>{" "}
+            {feed.updated_parsed &&
+              new Date(feed.updated_parsed).toLocaleDateString()}
           </p>
-        )}
-        <p className="text-sm text-gray-500 mt-1">
-          <strong>Last updated:</strong>{" "}
-          {feed.updated_parsed &&
-            new Date(feed.updated_parsed).toLocaleDateString()}
-        </p>
-      </CardContent>
+        </CardContent>
+      </Link>
 
       <CardFooter className="px-4 py-2 flex items-center justify-end">
         <Button

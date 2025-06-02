@@ -186,7 +186,7 @@ func (s *Service) RemoveItemFromCollection(ctx context.Context, r repository.Rem
 }
 
 // ListCollectionItems retrieves paginated items in a collection, including like status.
-func (s *Service) ListCollectionItems(ctx context.Context, r ListCollectionItemsRequest) (*ListCollectionItemsResponse, error) {
+func (s *Service) ListCollectionItems(ctx context.Context, r ListCollectionItemsRequest) (*ListItemsResponse, error) {
 	total, err := s.Repo.CountItemsInCollection(ctx, r.CollectionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -254,7 +254,7 @@ func (s *Service) ListCollectionItems(ctx context.Context, r ListCollectionItems
 		}
 	}
 
-	return &ListCollectionItemsResponse{
+	return &ListItemsResponse{
 		Limit:      r.Limit,
 		Offset:     r.Offset,
 		TotalCount: total,
