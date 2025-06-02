@@ -10,6 +10,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/rhajizada/gazette/internal/cache"
 	"github.com/rhajizada/gazette/internal/config"
 	"github.com/rhajizada/gazette/internal/database"
 	"github.com/rhajizada/gazette/internal/handler"
@@ -69,11 +70,16 @@ func main() {
 	}
 
 	rq := repository.New(pool)
-	conn := database.CreateRedisClient(&cfg.Redis)
+	conn := database.CreateRedisClient(&cfg.Queue)
 	client := *asynq.NewClient(conn)
 	err = client.Ping()
 	if err != nil {
 		log.Panicf("failed to connect to Redis: %v", err)
+	}
+
+	cache, err := cache.New(&cfg.Cache)
+	if err != nil {
+		log.Panicf("failed to connect to queue redis server: %v", err)
 	}
 
 	verifier, err := oauth.GetVerifier(&cfg.OAuth)
@@ -87,7 +93,7 @@ func main() {
 	}
 
 	// Create handler
-	service := service.New(rq, &client)
+	service := service.New(rq, &client, cache)
 	handler := handler.New(service, []byte(cfg.SecretKey), verifier, oauthCfg)
 
 	mux := http.NewServeMux()

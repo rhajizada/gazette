@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/hibiken/asynq"
+	"github.com/rhajizada/gazette/internal/cache"
 	"github.com/rhajizada/gazette/internal/workers"
 
 	"github.com/jackc/pgx/v5/stdlib"
@@ -62,14 +63,19 @@ func main() {
 	}
 
 	rq := repository.New(pool)
-	conn := database.CreateRedisClient(&cfg.Redis)
+	conn := database.CreateRedisClient(&cfg.Queue)
 	client := *asynq.NewClient(conn)
 	err = client.Ping()
 	if err != nil {
-		log.Panicf("failed to connect to Redis: %v", err)
+		log.Panicf("failed to connect to queue redis server: %v", err)
 	}
 	if err != nil {
 		log.Panicf("failed to connect to Redis: %v", err)
+	}
+
+	cache, err := cache.New(&cfg.Cache)
+	if err != nil {
+		log.Panicf("failed to connect to queue redis server: %v", err)
 	}
 
 	serverConfig := workers.GetConfig(&cfg.Queues)
@@ -85,11 +91,12 @@ func main() {
 
 	server := asynq.NewServer(conn, *serverConfig)
 
-	handler := workers.NewHandler(rq, &client, &cfg.Ollama)
+	handler := workers.NewHandler(rq, &client, cache, &cfg.Ollama)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(workers.TypeSyncData, handler.HandleDataSync)
 	mux.HandleFunc(workers.TypeSyncFeed, handler.HandleFeedSync)
 	mux.HandleFunc(workers.TypeEmbedItem, handler.HandleEmbedItem)
+	mux.HandleFunc(workers.TypeCacheUser, handler.HandleCacheUser)
 	mux.HandleFunc(workers.TypeEmbedUser, handler.HandleEmbedUser)
 
 	if err := server.Run(mux); err != nil {

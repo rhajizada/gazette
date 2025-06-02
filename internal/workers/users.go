@@ -7,13 +7,53 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hibiken/asynq"
 
+	"github.com/rhajizada/gazette/internal/cache"
 	"github.com/rhajizada/gazette/internal/repository"
 )
 
 const MaxItemsLimit int32 = 100
+
+func (h *Handler) HandleCacheUser(ctx context.Context, t *asynq.Task) error {
+	prefix := fmt.Sprintf("task %s -", t.ResultWriter().TaskID())
+
+	var p CacheUserPayload
+	if err := json.Unmarshal(t.Payload(), &p); err != nil {
+		return fmt.Errorf("invalid payload: %w", asynq.SkipRetry)
+	}
+	userID := p.UserID
+	resp, err := h.Repo.ListSuggestedItemsForUserCache(ctx, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("%s - no suggested items found for user %s", prefix, userID)
+			return nil
+		} else {
+			return fmt.Errorf(
+				"failed to fetch suggested items for user %s", userID,
+			)
+		}
+	}
+
+	items := make([]cache.SuggestedItem, len(resp))
+	for i, j := range resp {
+		items[i] = cache.SuggestedItem{
+			ID:         j.ID,
+			Freshness:  j.Freshness,
+			Similarity: j.Similarity,
+			Score:      j.Score,
+		}
+	}
+
+	err = h.Cache.StoreUserSuggestions(ctx, userID, items, time.Hour)
+	if err != nil {
+		return err
+	}
+	log.Printf("%s cached suggested items for user %s", prefix, userID)
+	return nil
+}
 
 func (h *Handler) HandleEmbedUser(ctx context.Context, t *asynq.Task) error {
 	prefix := fmt.Sprintf("task %s -", t.ResultWriter().TaskID())
@@ -108,5 +148,59 @@ func (h *Handler) HandleEmbedUser(ctx context.Context, t *asynq.Task) error {
 	}
 
 	log.Printf("%s synched embedding clusters for user %s", prefix, userID)
+
+	task, _ := NewCacheUserTask(userID)
+	tResp, err := h.Client.Enqueue(task, asynq.Queue("default"))
+	if err != nil {
+		return fmt.Errorf("failed to queue caching task for user %s", userID)
+	}
+	log.Printf(
+		"%s queued caching task %s for user %s ",
+		prefix, tResp.ID, userID,
+	)
+	return nil
+}
+
+func (h *Handler) HandleUserSync(ctx context.Context, t *asynq.Task) error {
+	prefix := fmt.Sprintf(
+		"task %s -",
+		t.ResultWriter().TaskID(),
+	)
+	count, err := h.Repo.CountUsers(ctx)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("failed to count users: %v", err)
+	}
+	if count == 0 {
+		return nil
+	}
+	for offset := int64(0); offset < count; offset += MaxLimit {
+		limit := MaxLimit
+		if remaining := count - offset; remaining < MaxLimit {
+			limit = int(remaining)
+		}
+
+		users, err := h.Repo.ListUsers(ctx, repository.ListUsersParams{
+			Limit:  int32(limit),
+			Offset: int32(offset),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list users: %v", err)
+		}
+
+		for _, user := range users {
+			task, err := NewCacheUserTask(user.ID)
+			if err != nil {
+				return err
+			}
+
+			ti, err := h.Client.Enqueue(task, asynq.Queue("critical"))
+			if err != nil {
+				return err
+			}
+			log.Printf("%s queued caching task %s for user %s", prefix, ti.ID, user.ID)
+
+		}
+
+	}
 	return nil
 }
