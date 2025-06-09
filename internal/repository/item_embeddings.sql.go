@@ -13,31 +13,30 @@ import (
 )
 
 const createItemEmbedding = `-- name: CreateItemEmbedding :one
-INSERT INTO item_embeddings (
-  item_id,
-  embedding
-)
-VALUES (
-  $1,
-  $2
-)
+INSERT INTO item_embeddings (item_id, chunk_index, embedding)
+VALUES ($1, $2, $3)
 RETURNING
+  id,
   item_id,
+  chunk_index,
   embedding,
   created_at,
   updated_at
 `
 
 type CreateItemEmbeddingParams struct {
-	ItemID    uuid.UUID        `json:"itemId"`
-	Embedding *pgvector.Vector `json:"embedding"`
+	ItemID     uuid.UUID        `json:"itemId"`
+	ChunkIndex int32            `json:"chunkIndex"`
+	Embedding  *pgvector.Vector `json:"embedding"`
 }
 
 func (q *Queries) CreateItemEmbedding(ctx context.Context, arg CreateItemEmbeddingParams) (ItemEmbedding, error) {
-	row := q.db.QueryRow(ctx, createItemEmbedding, arg.ItemID, arg.Embedding)
+	row := q.db.QueryRow(ctx, createItemEmbedding, arg.ItemID, arg.ChunkIndex, arg.Embedding)
 	var i ItemEmbedding
 	err := row.Scan(
+		&i.ID,
 		&i.ItemID,
+		&i.ChunkIndex,
 		&i.Embedding,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -47,29 +46,33 @@ func (q *Queries) CreateItemEmbedding(ctx context.Context, arg CreateItemEmbeddi
 
 const deleteItemEmbeddingByID = `-- name: DeleteItemEmbeddingByID :exec
 DELETE FROM item_embeddings
-WHERE item_id = $1
+WHERE id = $1
 `
 
-func (q *Queries) DeleteItemEmbeddingByID(ctx context.Context, itemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteItemEmbeddingByID, itemID)
+func (q *Queries) DeleteItemEmbeddingByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteItemEmbeddingByID, id)
 	return err
 }
 
 const getItemEmbeddingByID = `-- name: GetItemEmbeddingByID :one
 SELECT
+  id,
   item_id,
+  chunk_index,
   embedding,
   created_at,
   updated_at
 FROM item_embeddings
-WHERE item_id = $1
+WHERE id = $1
 `
 
-func (q *Queries) GetItemEmbeddingByID(ctx context.Context, itemID uuid.UUID) (ItemEmbedding, error) {
-	row := q.db.QueryRow(ctx, getItemEmbeddingByID, itemID)
+func (q *Queries) GetItemEmbeddingByID(ctx context.Context, id uuid.UUID) (ItemEmbedding, error) {
+	row := q.db.QueryRow(ctx, getItemEmbeddingByID, id)
 	var i ItemEmbedding
 	err := row.Scan(
+		&i.ID,
 		&i.ItemID,
+		&i.ChunkIndex,
 		&i.Embedding,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -77,29 +80,73 @@ func (q *Queries) GetItemEmbeddingByID(ctx context.Context, itemID uuid.UUID) (I
 	return i, err
 }
 
+const getItemEmbeddingsByItemID = `-- name: GetItemEmbeddingsByItemID :many
+SELECT
+  id,
+  item_id,
+  chunk_index,
+  embedding,
+  created_at,
+  updated_at
+FROM item_embeddings
+WHERE item_id = $1
+ORDER BY chunk_index
+`
+
+func (q *Queries) GetItemEmbeddingsByItemID(ctx context.Context, itemID uuid.UUID) ([]ItemEmbedding, error) {
+	rows, err := q.db.Query(ctx, getItemEmbeddingsByItemID, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ItemEmbedding
+	for rows.Next() {
+		var i ItemEmbedding
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.ChunkIndex,
+			&i.Embedding,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateItemEmbeddingByID = `-- name: UpdateItemEmbeddingByID :one
 UPDATE item_embeddings
 SET
   embedding  = $2,
   updated_at = now()
-WHERE item_id = $1
+WHERE id = $1
 RETURNING
+  id,
   item_id,
+  chunk_index,
   embedding,
   created_at,
   updated_at
 `
 
 type UpdateItemEmbeddingByIDParams struct {
-	ItemID    uuid.UUID        `json:"itemId"`
+	ID        uuid.UUID        `json:"id"`
 	Embedding *pgvector.Vector `json:"embedding"`
 }
 
 func (q *Queries) UpdateItemEmbeddingByID(ctx context.Context, arg UpdateItemEmbeddingByIDParams) (ItemEmbedding, error) {
-	row := q.db.QueryRow(ctx, updateItemEmbeddingByID, arg.ItemID, arg.Embedding)
+	row := q.db.QueryRow(ctx, updateItemEmbeddingByID, arg.ID, arg.Embedding)
 	var i ItemEmbedding
 	err := row.Scan(
+		&i.ID,
 		&i.ItemID,
+		&i.ChunkIndex,
 		&i.Embedding,
 		&i.CreatedAt,
 		&i.UpdatedAt,

@@ -16,7 +16,7 @@ import {
   GithubComRhajizadaGazetteInternalServiceFeed,
   GithubComRhajizadaGazetteInternalServiceItem,
   GithubComRhajizadaGazetteInternalServiceLikeItemResponse,
-  GithubComRhajizadaGazetteInternalServiceListCollectionItemsResponse,
+  GithubComRhajizadaGazetteInternalServiceListCategoriesResponse,
   GithubComRhajizadaGazetteInternalServiceListCollectionsResponse,
   GithubComRhajizadaGazetteInternalServiceListFeedsResponse,
   GithubComRhajizadaGazetteInternalServiceListItemsResponse,
@@ -31,7 +31,65 @@ export class Api<
   SecurityDataType = unknown,
 > extends HttpClient<SecurityDataType> {
   /**
-   * @description Retrieves paginated collections for the current user.
+   * @description Retrieves paginated list of distinct categories.
+   *
+   * @tags Categories
+   * @name CategoriesList
+   * @summary List categories
+   * @request GET:/api/categories
+   * @secure
+   */
+  categoriesList = (
+    query: {
+      /** Max number of categories */
+      limit: number;
+      /** Number of categories to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListCategoriesResponse,
+      string
+    >({
+      path: `/api/categories`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves items in the categories, including like status.
+   *
+   * @tags Categories
+   * @name CategoriesItemsList
+   * @summary List items in the categories.
+   * @request GET:/api/categories/items
+   * @secure
+   */
+  categoriesItemsList = (
+    query: {
+      /** Category namess */
+      name: string[];
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/categories/items`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves paginated list of user's collections.
    *
    * @tags Collections
    * @name CollectionsList
@@ -159,7 +217,7 @@ export class Api<
    *
    * @tags Collections
    * @name CollectionsItemsList
-   * @summary List items in collection
+   * @summary List items in the collection
    * @request GET:/api/collections/{collectionID}/items
    * @secure
    */
@@ -174,7 +232,7 @@ export class Api<
     params: RequestParams = {},
   ) =>
     this.request<
-      GithubComRhajizadaGazetteInternalServiceListCollectionItemsResponse,
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
       string
     >({
       path: `/api/collections/${collectionId}/items`,
@@ -292,7 +350,7 @@ export class Api<
   /**
    * @description Retrieves feed items.
    *
-   * @tags Items
+   * @tags Feeds
    * @name FeedsItemsList
    * @summary List feed items
    * @request GET:/api/feeds/{feedID}/items
@@ -458,6 +516,91 @@ export class Api<
     this.request<void, string>({
       path: `/api/items/${itemId}/like`,
       method: "DELETE",
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves paginated list of similiar items.
+   *
+   * @tags Items
+   * @name ItemsSimiliarList
+   * @summary List similiar items
+   * @request GET:/api/items/{itemID}/similiar
+   * @secure
+   */
+  itemsSimiliarList = (
+    itemId: string,
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/items/${itemId}/similiar`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves subscribed items for user, paginated.
+   *
+   * @tags Subscribed
+   * @name SubscribedList
+   * @summary List subscribed items
+   * @request GET:/api/subscribed
+   * @secure
+   */
+  subscribedList = (
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/subscribed`,
+      method: "GET",
+      query: query,
+      secure: true,
+      ...params,
+    });
+  /**
+   * @description Retrieves suggested items for user, paginated.
+   *
+   * @tags Suggested
+   * @name SuggestedList
+   * @summary List suggested items
+   * @request GET:/api/suggested
+   * @secure
+   */
+  suggestedList = (
+    query: {
+      /** Max number of items */
+      limit: number;
+      /** Number of items to skip */
+      offset: number;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<
+      GithubComRhajizadaGazetteInternalServiceListItemsResponse,
+      string
+    >({
+      path: `/api/suggested`,
+      method: "GET",
+      query: query,
       secure: true,
       ...params,
     });

@@ -13,6 +13,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -31,11 +40,14 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Collections() {
   const { api, logout } = useAuth();
+  const PAGE_SIZE = 15;
+
   const [collections, setCollections] = useState<CollectionModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   type SortKey = "name" | "created_at" | "last_updated";
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -133,6 +145,22 @@ export default function Collections() {
       return sortAsc ? cmp : -cmp;
     });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const pages: (number | "ellipsis")[] = [];
+  if (totalPages > 0) {
+    pages.push(1);
+    if (page > 3) pages.push("ellipsis");
+    const start = Math.max(2, page - 2);
+    const end = Math.min(totalPages - 1, page + 2);
+    for (let p = start; p <= end; p++) {
+      pages.push(p);
+    }
+    if (page < totalPages - 2) pages.push("ellipsis");
+    if (totalPages > 1) pages.push(totalPages);
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -165,6 +193,7 @@ export default function Collections() {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
+                setPage(1);
               }}
               className="flex-1 min-w-0"
             />
@@ -188,6 +217,7 @@ export default function Collections() {
                   setSortKey("name");
                   setSortAsc(true);
                 }
+                setPage(1);
               }}
               className="flex-shrink-0"
             >
@@ -201,69 +231,110 @@ export default function Collections() {
             <Spinner />
           </div>
         ) : (
-          <div className="shadow-md rounded-lg overflow-hidden">
-            <Table className="border-collapse">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-3 py-2">Name</TableHead>
-                  <TableHead className="px-3 py-2">Created</TableHead>
-                  <TableHead className="px-3 py-2">Last Updated</TableHead>
-                  <TableHead className="px-3 py-2"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-gray-50">
-                    <TableCell className="px-3 py-2">
-                      <Link
-                        to={`/collections/${c.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {c.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {c.created_at
-                        ? new Date(c.created_at).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {c.last_updated
-                        ? new Date(c.last_updated).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 size={14} />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Delete Collection?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. Delete "{c.name}"?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(c.id!)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
+          <>
+            <div className="shadow-md rounded-lg overflow-hidden">
+              <Table className="border-collapse">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-3 py-2">Name</TableHead>
+                    <TableHead className="px-3 py-2">Created</TableHead>
+                    <TableHead className="px-3 py-2">Last Updated</TableHead>
+                    <TableHead className="px-3 py-2"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {pageItems.map((c) => (
+                    <TableRow key={c.id} className="hover:bg-gray-50">
+                      <TableCell className="px-3 py-2">
+                        <Link
+                          to={`/collections/${c.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {c.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        {c.created_at
+                          ? new Date(c.created_at).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        {c.last_updated
+                          ? new Date(c.last_updated).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 size={14} />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete Collection?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. Delete "{c.name}"?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(c.id!)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4 flex justify-center">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        aria-disabled={page === 1}
+                      />
+                    </PaginationItem>
+                    {pages.map((p, idx) =>
+                      p === "ellipsis" ? (
+                        <PaginationItem key={`e${idx}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            onClick={() => setPage(p as number)}
+                            isActive={p === page}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        aria-disabled={page === totalPages}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </main>
       <div className="mt-auto">

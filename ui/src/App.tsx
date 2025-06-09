@@ -1,9 +1,12 @@
 import { Route, Routes } from "react-router-dom";
 import RequireAuth from "./components/RequireAuth";
 import CallbackPage from "./pages/Callback";
-import CollectionDetails from "./pages/CollectionDetails.tsx";
+import SubscribedItems from "./pages/SubscribedItems.tsx";
+import SuggestedItems from "./pages/SuggestedItems.tsx";
+import CategoriesPage from "./pages/Categories.tsx";
+import CollectionDetails from "./pages/CollectionItems.tsx";
 import Collections from "./pages/Collections.tsx";
-import FeedDetails from "./pages/FeedDetails.tsx";
+import FeedItems from "./pages/FeedItems.tsx";
 import Feeds from "./pages/Feeds";
 import ItemDetails from "./pages/ItemDetails.tsx";
 import Login from "./pages/Login";
@@ -17,7 +20,24 @@ export default function App() {
         path="/"
         element={
           <RequireAuth>
-            <Feeds />
+            <SubscribedItems />
+          </RequireAuth>
+        }
+      />
+      <Route path="/categories" element={<CategoriesPage />} />
+      <Route
+        path="/collections"
+        element={
+          <RequireAuth>
+            <Collections />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/collections/:collectionID"
+        element={
+          <RequireAuth>
+            <CollectionDetails />
           </RequireAuth>
         }
       />
@@ -30,18 +50,10 @@ export default function App() {
         }
       />
       <Route
-        path="/collections"
-        element={
-          <RequireAuth>
-            <Collections />
-          </RequireAuth>
-        }
-      />
-      <Route
         path="/feeds/:feedID"
         element={
           <RequireAuth>
-            <FeedDetails />
+            <FeedItems />
           </RequireAuth>
         }
       />
@@ -54,10 +66,10 @@ export default function App() {
         }
       />
       <Route
-        path="/collections/:collectionID"
+        path="/suggested"
         element={
           <RequireAuth>
-            <CollectionDetails />
+            <SuggestedItems />
           </RequireAuth>
         }
       />

@@ -23,6 +23,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import type {
   GithubComRhajizadaGazetteInternalServiceCollection as CollectionModel,
+  GithubComRhajizadaGazetteInternalServiceFeed as FeedModel,
   GithubComRhajizadaGazetteInternalServiceItem as ItemModel,
 } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
@@ -39,10 +40,16 @@ export default function ItemDetails() {
   const [liked, setLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
 
+  const [feed, setFeed] = useState<FeedModel | null>(null);
+
   const [collections, setCollections] = useState<CollectionModel[]>([]);
   const [userCollections, setMyCollections] = useState<CollectionModel[]>([]);
   const [included, setIncluded] = useState<Record<string, boolean>>({});
   const [collectionsLoading, setCollectionsLoading] = useState(false);
+
+  const [similarItems, setSimilarItems] = useState<ItemModel[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
 
@@ -55,7 +62,6 @@ export default function ItemDetails() {
     return `hsl(${hue}, 70%, 50%)`;
   };
 
-  // fetch item detail
   useEffect(() => {
     if (!itemID) return;
     setLoading(true);
@@ -78,7 +84,16 @@ export default function ItemDetails() {
       .finally(() => setLoading(false));
   }, [api, itemID, logout]);
 
-  // fetch collections logic
+  useEffect(() => {
+    if (!item?.feed_id) return;
+    api
+      .feedsDetail(item.feed_id, { secure: true, format: "json" })
+      .then((res) => setFeed(res.data))
+      .catch(async (err: any) => {
+        if (err.error === "Unauthorized") logout();
+      });
+  }, [api, item, logout]);
+
   const fetchCollections = useCallback(async () => {
     if (!itemID) return;
     setCollectionsLoading(true);
@@ -134,6 +149,31 @@ export default function ItemDetails() {
       fetchCollections();
     }
   }, [item, error, notFound, fetchCollections]);
+
+  useEffect(() => {
+    if (!itemID) return;
+    setSimilarLoading(true);
+    setSimilarError(null);
+    api
+      .itemsSimiliarList(
+        itemID,
+        { limit: 5, offset: 0 },
+        { secure: true, format: "json" },
+      )
+      .then((res) => {
+        setSimilarItems(
+          Array.isArray(res.data) ? res.data : res.data.items || [],
+        );
+      })
+      .catch(async (err: any) => {
+        if (err.error === "Unauthorized") logout();
+        else {
+          const msg = await err.text();
+          setSimilarError(msg || "Failed to load similar items");
+        }
+      })
+      .finally(() => setSimilarLoading(false));
+  }, [api, itemID, logout]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -228,34 +268,55 @@ export default function ItemDetails() {
           <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
             {item.title}
           </h1>
-          {item.authors && item.authors.length > 0 && (
+          {feed && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {item.authors.map((a, i) => (
-                <Badge key={i}>{a.name || a.email}</Badge>
-              ))}
+              {(item.authors ?? []).filter(
+                (a) =>
+                  (a.name?.trim().length ?? 0) > 0 ||
+                  (a.email?.trim().length ?? 0) > 0,
+              ).length > 0 ? (
+                (item.authors ?? [])
+                  .filter(
+                    (a) =>
+                      (a.name?.trim().length ?? 0) > 0 ||
+                      (a.email?.trim().length ?? 0) > 0,
+                  )
+                  .map((a, i) => (
+                    <Link key={i} to={`/feeds/${feed.id}`}>
+                      <Badge>{a.name || a.email}</Badge>
+                    </Link>
+                  ))
+              ) : (
+                <Link to={`/feeds/${feed.id}`}>
+                  <Badge>{feed.title}</Badge>
+                </Link>
+              )}
             </div>
           )}
           <p className="leading-7 [&:not(:first-child)]:mt-6 text-sm text-gray-500">
             Published:{" "}
-            {item.published_parsed &&
-              new Date(item.published_parsed).toLocaleString()}
-            <br />
-            Updated:{" "}
-            {item.updated_parsed &&
-              new Date(item.updated_parsed).toLocaleString()}
+            {item.published_parsed
+              ? new Date(item.published_parsed).toLocaleString()
+              : "—"}
+            {item.updated_parsed && (
+              <>
+                <br />
+                Updated: {new Date(item.updated_parsed).toLocaleString()}
+              </>
+            )}
           </p>
           <br />
           {item.content && (
             <div
-              className="mt-6 leading-7 max-w-prose mx-auto"
-              dangerouslySetInnerHTML={{ __html: item.content }}
+              className="mt-6 leading-7 max-w-prose mx-auto overflow-x-auto break-words [&_img,&_video,&_iframe]:max-w-full [&_img,&_video,&_iframe]:h-auto"
+              dangerouslySetInnerHTML={{ __html: item.content! }}
             />
           )}
           {item.link && (
             <div className="mt-6 border-l-2 pl-4 italic">
               <Button asChild variant="link">
                 <a href={item.link} target="_blank" rel="noopener noreferrer">
-                  Read Original Source
+                  Read source
                 </a>
               </Button>
             </div>
@@ -288,7 +349,9 @@ export default function ItemDetails() {
               <br />
               <div className="flex flex-wrap gap-2">
                 {item.categories.slice(0, 3).map((cat) => (
-                  <Badge key={cat}>{cat}</Badge>
+                  <Link to={`/categories?name=${encodeURIComponent(cat)}`}>
+                    <Badge key={cat}>{cat}</Badge>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -373,6 +436,41 @@ export default function ItemDetails() {
                 <Link to={`/collections/${c.id}`}>{c.name}</Link>
               </Badge>
             ))}
+          </div>
+          <div className="mt-8 clear-left">
+            {similarLoading && (
+              <div className="mt-4">
+                <Spinner />
+              </div>
+            )}
+            {similarError && (
+              <p className="mt-4 text-sm text-red-600">{similarError}</p>
+            )}
+            {!similarLoading && similarItems.length > 0 && (
+              <>
+                <h2 className="text-3xl font-semibold">Similar items</h2>
+                <ul className="mt-4 space-y-2">
+                  {similarItems.map((sim) => (
+                    <div
+                      key={sim.id}
+                      className="min-w-[240px] flex-shrink-0 p-2 hover:shadow-lg transition-shadow"
+                    >
+                      <Link
+                        to={`/items/${sim.id}`}
+                        className="text-md font-semibold hover:underline block mb-2"
+                      >
+                        {sim.title}
+                      </Link>
+                      {sim.published_parsed && (
+                        <p className="text-xs text-gray-400 mb-2">
+                          {new Date(sim.published_parsed).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </aside>
       </main>

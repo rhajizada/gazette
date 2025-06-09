@@ -324,7 +324,7 @@ func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 // ListItemsByFeedID returns paginated list of items.
 // @Summary      List feed items
 // @Description  Retrieves feed items.
-// @Tags         Items
+// @Tags         Feeds
 // @Param        feedID  path      string  true   "Feed UUID"
 // @Param        limit   query     int32   true   "Max number of items"
 // @Param        offset  query     int32   true   "Number of items to skip"

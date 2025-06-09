@@ -39,12 +39,18 @@ func main() {
 	}
 
 	dataSyncTask, _ := workers.NewSyncDataTask()
-
 	id, err := scheduler.Register("@every 30m", dataSyncTask, asynq.Queue("critical"))
 	if err != nil {
 		log.Panicf("failed to schedule data sync task: %v", err)
 	}
 	log.Printf("scheduled data sync task %s", id)
+
+	userSyncTask, _ := workers.NewSyncUserTask()
+	id, err = scheduler.Register("@every 15m", userSyncTask, asynq.Queue("critical"))
+	if err != nil {
+		log.Panicf("failed to schedule user sync task: %v", err)
+	}
+	log.Printf("scheduled user sync task %s", id)
 
 	if err := scheduler.Run(); err != nil {
 		log.Panicf("could not run scheduler: %v", err)

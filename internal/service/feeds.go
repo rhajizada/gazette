@@ -134,7 +134,7 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 		Title:           &remote.Title,
 		Description:     &remote.Description,
 		Link:            &remote.Link,
-		FeedLink:        remote.FeedLink,
+		FeedLink:        r.FeedURL,
 		Links:           remote.Links,
 		UpdatedParsed:   remote.UpdatedParsed,
 		PublishedParsed: remote.PublishedParsed,

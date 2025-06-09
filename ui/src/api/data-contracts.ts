@@ -69,8 +69,8 @@ export interface GithubComRhajizadaGazetteInternalServiceLikeItemResponse {
   liked_at?: string;
 }
 
-export interface GithubComRhajizadaGazetteInternalServiceListCollectionItemsResponse {
-  items?: GithubComRhajizadaGazetteInternalServiceItem[];
+export interface GithubComRhajizadaGazetteInternalServiceListCategoriesResponse {
+  categories?: string[];
   limit?: number;
   offset?: number;
   total_count?: number;

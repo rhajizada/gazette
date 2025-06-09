@@ -23,6 +23,8 @@ tasks:
     desc: Build Docker image for the given app
     vars:
       app: '{{.app | default "server"}}'
+      platform: '{{.platform | default "linux/amd64"}}'
+      tag: '{{.tag | default (print .name "-" .app) }}'
       version:
         sh: git rev-parse --short HEAD
     preconditions:
@@ -32,18 +34,18 @@ tasks:
       - |
         docker build \
          --build-arg VERSION={{.version}} \
+         --platform {{.platform}} \
          -f docker/{{.app}}/Dockerfile \
-         -t {{.name}}-{{.app}} \
+         -t {{.tag}} \
          .
     dir: ./
 
   push-image:
     desc: Push Docker image for the given app
-    deps:
-      - build-image
     vars:
       app: '{{.app | default "server"}}'
-      tag: '{{.tag | default "latest"}}'
+      version:
+        sh: git rev-parse --short HEAD
     requires:
       vars:
         - DOCKER_REGISTRY_URL
@@ -51,10 +53,30 @@ tasks:
       - sh: '[ "{{.app}}" = "server" ] || [ "{{.app}}" = "worker" ] || [ "{{.app}}" = "scheduler" ]'
         msg: "❌ Error: invalid app '{{.app}}', valid options are server, worker, or scheduler."
     cmds:
+      - task: build-image
+        vars:
+          {
+            app: "{{.app}}",
+            platform: "linux/amd64",
+            tag: "{{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.version}}",
+            version: "{{.version}}",
+          }
       - |
-        docker tag {{.name}}-{{.app}} {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
-        docker push {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.tag}}
+        docker push {{.DOCKER_REGISTRY_URL}}/{{.app}}:{{.version}}
     dir: ./
+
+  push:
+    desc: Build and push all images
+    requires:
+      vars:
+        - DOCKER_REGISTRY_URL
+    cmds:
+      - task: push-image
+        vars: { app: "server" }
+      - task: push-image
+        vars: { app: "worker" }
+      - task: push-image
+        vars: { app: "scheduler" }
 
   compose:
     desc: Docker compose
