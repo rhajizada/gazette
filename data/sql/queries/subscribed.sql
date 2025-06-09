@@ -5,7 +5,7 @@ FROM items AS i
 JOIN user_feeds AS fs
   ON fs.feed_id = i.feed_id
 WHERE fs.user_id = $1
-  AND i.published_parsed >= NOW() - INTERVAL '90 days';
+  AND i.published_parsed >= NOW() - INTERVAL '30 days';
 
 -- name: ListSubscribedItemsByUser :many
 SELECT
@@ -33,7 +33,7 @@ JOIN user_feeds AS fs
 LEFT JOIN user_likes AS ul
   ON ul.item_id = i.id AND ul.user_id = $1
 WHERE fs.user_id = $1
-  AND i.published_parsed >= NOW() - INTERVAL '90 days'
+  AND i.published_parsed >= NOW() - INTERVAL '30 days'
 ORDER BY i.published_parsed DESC
 LIMIT  $2
 OFFSET $3;

@@ -5,7 +5,7 @@ FROM (
   FROM items AS i
   JOIN item_embeddings AS e ON e.item_id = i.id
   JOIN user_embedding_clusters AS c ON c.user_id = $1
-  WHERE i.published_parsed >= NOW() - INTERVAL '90 days'
+  WHERE i.published_parsed >= NOW() - INTERVAL '30 days'
     AND NOT EXISTS (
       SELECT 1
       FROM user_likes ul
@@ -49,7 +49,7 @@ SELECT
 FROM items AS i
 JOIN item_embeddings AS e ON e.item_id = i.id
 JOIN user_embedding_clusters AS c ON c.user_id = $1
-WHERE i.published_parsed >= NOW() - INTERVAL '90 days'
+WHERE i.published_parsed >= NOW() - INTERVAL '30 days'
   AND NOT EXISTS (
     SELECT 1
     FROM user_likes ul
@@ -96,7 +96,7 @@ SELECT
 FROM items AS i
 JOIN item_embeddings AS e ON e.item_id = i.id
 JOIN user_embedding_clusters AS c ON c.user_id = $1
-WHERE i.published_parsed >= NOW() - INTERVAL '90 days'
+WHERE i.published_parsed >= NOW() - INTERVAL '30 days'
   AND NOT EXISTS (
     SELECT 1
     FROM user_likes ul
