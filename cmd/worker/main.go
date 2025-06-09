@@ -97,6 +97,7 @@ func main() {
 	mux.HandleFunc(workers.TypeSyncFeed, handler.HandleFeedSync)
 	mux.HandleFunc(workers.TypeEmbedItem, handler.HandleEmbedItem)
 	mux.HandleFunc(workers.TypeCacheUser, handler.HandleCacheUser)
+	mux.HandleFunc(workers.TypeSyncUser, handler.HandleUserSync)
 	mux.HandleFunc(workers.TypeEmbedUser, handler.HandleEmbedUser)
 
 	if err := server.Run(mux); err != nil {
