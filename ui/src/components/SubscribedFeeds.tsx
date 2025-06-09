@@ -17,12 +17,12 @@ import type { GithubComRhajizadaGazetteInternalServiceFeed as FeedModel } from "
 import { useAuth } from "../context/AuthContext";
 
 const PAGE_SIZE = 15;
-const labelMap: Record<"title" | "last_updated_at", string> = {
+const labelMap: Record<"title" | "updated_parsed", string> = {
   title: "title",
-  last_updated_at: "last updated",
+  updated_parsed: "updated",
 };
 
-type SortKey = "title" | "last_updated_at";
+type SortKey = "title" | "updated_parsed";
 
 export function SubscribedFeeds() {
   const { api, logout } = useAuth();
@@ -121,9 +121,9 @@ export function SubscribedFeeds() {
           onClick={() => {
             if (sortKey === "title" && sortAsc) setSortAsc(false);
             else if (sortKey === "title" && !sortAsc) {
-              setSortKey("last_updated_at");
+              setSortKey("updated_parsed");
               setSortAsc(true);
-            } else if (sortKey === "last_updated_at" && sortAsc)
+            } else if (sortKey === "updated_parsed" && sortAsc)
               setSortAsc(false);
             else {
               setSortKey("title");
