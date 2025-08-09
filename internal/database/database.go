@@ -25,7 +25,7 @@ func CreatePool(cfg *config.PostgresConfig) (*pgxpool.Pool, error) {
 }
 
 // CreateRedisClient create Redis Client connection for asynq
-func CreateRedisClient(cfg *config.RedisConfig) *asynq.RedisClientOpt {
+func CreateRedisClient(cfg *config.QueueConfig) *asynq.RedisClientOpt {
 	conn := asynq.RedisClientOpt{
 		Addr:     cfg.Addr,
 		Username: cfg.Username,

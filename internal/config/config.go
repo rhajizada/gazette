@@ -6,12 +6,20 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// RedisConfig holds Redis settings loaded from environment variables.
-type RedisConfig struct {
-	Addr     string `env:"GAZETTE_REDIS_ADDR,notEmpty"`
-	Username string `env:"GAZETTE_REDIS_USERNAME"`
-	Password string `env:"GAZETTE_REDIS_PASSWORD"`
-	DB       int    `env:"GAZETTE_REDIS_DB" envDefault:"0"`
+// QueueConfig holds Redis settings loaded from environment variables for worker queue connection.
+type QueueConfig struct {
+	Addr     string `env:"GAZETTE_QUEUE_REDIS_ADDR,notEmpty"`
+	Username string `env:"GAZETTE_QUEUE_REDIS_USERNAME"`
+	Password string `env:"GAZETTE_QUEUE_REDIS_PASSWORD"`
+	DB       int    `env:"GAZETTE_QUEUE_REDIS_DB" envDefault:"0"`
+}
+
+// CacheConfig holds Redis settings loaded from environment variables for cache connection.
+type CacheConfig struct {
+	Addr     string `env:"GAZETTE_CACHE_REDIS_ADDR,notEmpty"`
+	Username string `env:"GAZETTE_CACHE_REDIS_USERNAME"`
+	Password string `env:"GAZETTE_CACHE_REDIS_PASSWORD"`
+	DB       int    `env:"GAZETTE_CACHE_REDIS_DB" envDefault:"0"`
 }
 
 // PostgresConfig holds Postgres settings loaded from environment variables.
@@ -29,7 +37,8 @@ type ServerConfig struct {
 	Port      int    `env:"GAZETTE_PORT" envDefault:"8080"`
 	SecretKey string `env:"GAZETTE_SECRET_KEY,notEmpty"`
 	Database  PostgresConfig
-	Redis     RedisConfig
+	Queue     QueueConfig
+	Cache     CacheConfig
 	OAuth     OAuthConfig
 }
 
@@ -57,14 +66,15 @@ type QueuesConfig struct {
 // WorkerConfig holds worker-related settings.
 type WorkerConfig struct {
 	Database PostgresConfig
-	Redis    RedisConfig
+	Queue    QueueConfig
+	Cache    CacheConfig
 	Ollama   OllamaConfig
 	Queues   QueuesConfig
 }
 
 // SchedulerConfig holds scheduler-related settings.
 type SchedulerConfig struct {
-	Redis             RedisConfig
+	Redis             QueueConfig
 	HeartbeatInterval time.Duration  `env:"GAZETTE_HEARTBEAT_INTERVAL" envDefault:"30s"`
 	Location          *time.Location `env:"GAZETTE_LOCATION" envDefault:"UTC"`
 }

@@ -21,9 +21,11 @@ type Collection struct {
 	LastUpdated time.Time `json:"lastUpdated"`
 }
 
-type CollectionEmbedding struct {
+type CollectionEmbeddingCluster struct {
 	CollectionID uuid.UUID        `json:"collectionId"`
-	Embedding    *pgvector.Vector `json:"embedding"`
+	ClusterID    int32            `json:"clusterId"`
+	Centroid     *pgvector.Vector `json:"centroid"`
+	MemberCount  int32            `json:"memberCount"`
 	CreatedAt    time.Time        `json:"createdAt"`
 	UpdatedAt    time.Time        `json:"updatedAt"`
 }
@@ -75,10 +77,12 @@ type Item struct {
 }
 
 type ItemEmbedding struct {
-	ItemID    uuid.UUID        `json:"itemId"`
-	Embedding *pgvector.Vector `json:"embedding"`
-	CreatedAt time.Time        `json:"createdAt"`
-	UpdatedAt time.Time        `json:"updatedAt"`
+	ID         uuid.UUID        `json:"id"`
+	ItemID     uuid.UUID        `json:"itemId"`
+	ChunkIndex int32            `json:"chunkIndex"`
+	Embedding  *pgvector.Vector `json:"embedding"`
+	CreatedAt  time.Time        `json:"createdAt"`
+	UpdatedAt  time.Time        `json:"updatedAt"`
 }
 
 type User struct {
@@ -90,11 +94,13 @@ type User struct {
 	LastUpdatedAt time.Time `json:"lastUpdatedAt"`
 }
 
-type UserEmbedding struct {
-	UserID    uuid.UUID        `json:"userId"`
-	Embedding *pgvector.Vector `json:"embedding"`
-	CreatedAt time.Time        `json:"createdAt"`
-	UpdatedAt time.Time        `json:"updatedAt"`
+type UserEmbeddingCluster struct {
+	UserID      uuid.UUID        `json:"userId"`
+	ClusterID   int32            `json:"clusterId"`
+	Centroid    *pgvector.Vector `json:"centroid"`
+	MemberCount int32            `json:"memberCount"`
+	CreatedAt   time.Time        `json:"createdAt"`
+	UpdatedAt   time.Time        `json:"updatedAt"`
 }
 
 type UserFeed struct {

@@ -63,6 +63,17 @@ definitions:
       updated_parsed:
         type: string
     type: object
+  github_com_rhajizada_gazette_internal_service.ImportFeedsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Feed'
+        type: array
+      processed:
+        type: integer
+      skipped:
+        type: integer
+    type: object
   github_com_rhajizada_gazette_internal_service.Item:
     properties:
       authors:
@@ -111,11 +122,11 @@ definitions:
       liked_at:
         type: string
     type: object
-  github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse:
+  github_com_rhajizada_gazette_internal_service.ListCategoriesResponse:
     properties:
-      items:
+      categories:
         items:
-          $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.Item'
+          type: string
         type: array
       limit:
         type: integer
@@ -211,9 +222,81 @@ info:
   title: Gazette API
   version: 0.1.0
 paths:
+  /api/categories:
+    get:
+      description: Retrieves paginated list of distinct categories.
+      parameters:
+      - description: Max number of categories
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of categories to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListCategoriesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List categories
+      tags:
+      - Categories
+  /api/categories/items:
+    get:
+      description: Retrieves items in the categories, including like status.
+      parameters:
+      - collectionFormat: multi
+        description: Category namess
+        in: query
+        items:
+          type: string
+        name: name
+        required: true
+        type: array
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List items in the categories.
+      tags:
+      - Categories
   /api/collections:
     get:
-      description: Retrieves paginated collections for the current user.
+      description: Retrieves paginated list of user's collections.
       parameters:
       - description: Max number of collections
         in: query
@@ -417,7 +500,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListCollectionItemsResponse'
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
         "400":
           description: Bad Request
           schema:
@@ -428,7 +511,7 @@ paths:
             type: string
       security:
       - BearerAuth: []
-      summary: List items in collection
+      summary: List items in the collection
       tags:
       - Collections
   /api/feeds:
@@ -589,7 +672,7 @@ paths:
       - BearerAuth: []
       summary: List feed items
       tags:
-      - Items
+      - Feeds
   /api/feeds/{feedID}/subscribe:
     delete:
       description: Removes the user’s subscription to a feed.
@@ -643,20 +726,70 @@ paths:
       - Feeds
   /api/feeds/export:
     get:
-      description: Returns a CSV list of all feeds, or only those the user is subscribed
-        to.
+      description: Generates an OPML file containing all current feeds and returns
+        it as a downloadable file.
       parameters:
       - description: Only subscribed feeds
         in: query
         name: subscribedOnly
         type: boolean
-      produces:
-      - text/csv
       responses:
         "200":
-          description: 'CSV file with one column: Feed URL'
+          description: OPML file
           schema:
             type: file
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "429":
+          description: Too Many Requests
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Export feeds as OPML
+      tags:
+      - Feeds
+  /api/feeds/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Imports feeds from an OPML file and subscribes the user to each
+        feed found.
+      parameters:
+      - description: OPML file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ImportFeedsResponse'
         "400":
           description: Bad Request
           schema:
@@ -667,7 +800,7 @@ paths:
             type: string
       security:
       - BearerAuth: []
-      summary: Export feeds
+      summary: Import feeds from OPML
       tags:
       - Feeds
   /api/items:
@@ -821,6 +954,111 @@ paths:
       summary: Like item
       tags:
       - Items
+  /api/items/{itemID}/similiar:
+    get:
+      description: Retrieves paginated list of similiar items.
+      parameters:
+      - description: Item UUID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List similiar items
+      tags:
+      - Items
+  /api/subscribed:
+    get:
+      description: Retrieves subscribed items for user, paginated.
+      parameters:
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List subscribed items
+      tags:
+      - Subscribed
+  /api/suggested:
+    get:
+      description: Retrieves suggested items for user, paginated.
+      parameters:
+      - description: Max number of items
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of items to skip
+        in: query
+        name: offset
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rhajizada_gazette_internal_service.ListItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List suggested items
+      tags:
+      - Suggested
   /api/user:
     get:
       description: Retrieves currently logged in user.

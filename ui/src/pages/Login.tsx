@@ -9,7 +9,11 @@ export default function Login() {
       <div className="flex flex-1 items-center justify-center p-4">
         <Card className="w-full max-w-md rounded-xl shadow-xl overflow-hidden">
           <div className="flex flex-col items-center p-6 space-y-6">
-            <img src="/logo512.png" alt="Gazette Logo" className="w-20 h-20" />
+            <img
+              src="/assets/gazette-512.png"
+              alt="Gazette Logo"
+              className="w-20 h-20"
+            />
 
             <h1 className="text-3xl font-extrabold text-gray-900">
               Welcome to Gazette

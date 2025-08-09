@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rhajizada/gazette/internal/middleware"
@@ -64,17 +65,21 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// ExportFeeds returns a CSV file containing the list of feed URLs.
-// @Summary      Export feeds
-// @Description  Returns a CSV list of all feeds, or only those the user is subscribed to.
+// ExportFeeds exports all feeds as an OPML file.
+// @Summary      Export feeds as OPML
+// @Description  Generates an OPML file containing all current feeds and returns it as a downloadable file.
 // @Tags         Feeds
-// @Produce      text/csv
-// @Param        subscribedOnly  query     bool    false  "Only subscribed feeds"
-// @Success      200             {file}   file    "List of feeds"
-// @Failure      400             {object}  string
-// @Failure      500             {object}  string
-// @Security     BearerAuth
+// @Param        subscribedOnly  query     bool   false  "Only subscribed feeds"
+// @Success      200  {file}   string  "OPML file"
+// @Failure      400  {string} string
+// @Failure      401  {string} string
+// @Failure      403  {string} string
+// @Failure      404  {string} string
+// @Failure      409  {string} string
+// @Failure      429  {string} string
+// @Failure      500  {string} string
 // @Router       /api/feeds/export [get]
+// @Security     BearerAuth
 func (h *Handler) ExportFeeds(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserClaims(r).UserID
 
@@ -85,9 +90,9 @@ func (h *Handler) ExportFeeds(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var feeds []string
+	var opmlData string
 	var err error
-	feeds, err = h.Service.ExportFeeds(r.Context(), service.ExportFeedsRequest{
+	opmlData, err = h.Service.ExportFeeds(r.Context(), service.ExportFeedsRequest{
 		UserID:       userID,
 		SubscbedOnly: subOnly,
 	})
@@ -102,32 +107,14 @@ func (h *Handler) ExportFeeds(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Disposition", `attachment; filename="feeds.csv"`)
+	ts := time.Now().Format("2006-01-02T15-04-05") // safe for filenames
+	filename := fmt.Sprintf("gazette-%s.opml", ts)
 
-	csvWriter := csv.NewWriter(w)
-	defer csvWriter.Flush()
-
-	headerRow := []string{"Feed URL"}
-	err = csvWriter.Write(headerRow)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to write header: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	for _, feed := range feeds {
-		record := []string{feed}
-		err := csvWriter.Write(record)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to write record: %v", err), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	err = csvWriter.Error()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to flush writer: %v", err), http.StatusInternalServerError)
-		return
-	}
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Content-Length", fmt.Sprint(len(opmlData)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(opmlData))
 }
 
 // CreateFeed subscribes the user to a feed, creating it if necessary.
@@ -169,6 +156,58 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(feed)
+}
+
+// ImportFeeds imports feed subscriptions from an OPML file.
+// @Summary      Import feeds from OPML
+// @Description  Imports feeds from an OPML file and subscribes the user to each feed found.
+// @Tags         Feeds
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file  formData  file  true  "OPML file"
+// @Success      200   {object}  service.ImportFeedsResponse
+// @Failure      400   {object}  string
+// @Failure      500   {object}  string
+// @Security     BearerAuth
+// @Router       /api/feeds/import [post]
+func (h *Handler) ImportFeeds(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetUserClaims(r)
+	var userID uuid.UUID
+	if claims != nil {
+		userID = claims.UserID
+	}
+
+	var reader io.Reader
+
+	if err := r.ParseMultipartForm(10 << 20); err == nil { // 10MB memory buffer
+		file, _, ferr := r.FormFile("file")
+		if ferr == nil {
+			defer file.Close()
+			reader = file
+		}
+	}
+
+	if reader == nil {
+		if r.Body == nil {
+			http.Error(w, "missing body", http.StatusBadRequest)
+			return
+		}
+		reader = r.Body
+	}
+
+	res, err := h.Service.ImportFeeds(r.Context(), userID, reader)
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to import feeds: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 // GetFeedByID returns one feed with subscription info.
@@ -324,7 +363,7 @@ func (h *Handler) UnsubscribeFromFeed(w http.ResponseWriter, r *http.Request) {
 // ListItemsByFeedID returns paginated list of items.
 // @Summary      List feed items
 // @Description  Retrieves feed items.
-// @Tags         Items
+// @Tags         Feeds
 // @Param        feedID  path      string  true   "Feed UUID"
 // @Param        limit   query     int32   true   "Max number of items"
 // @Param        offset  query     int32   true   "Number of items to skip"

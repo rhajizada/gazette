@@ -87,6 +87,13 @@ type Feed struct {
 	SubscribedAt    *time.Time `json:"subscribed_at,omitempty"`
 }
 
+// ImportFeedsResponse is the response contract for OPML imports.
+type ImportFeedsResponse struct {
+	Processed int    `json:"processed"`
+	Skipped   int    `json:"skipped"`
+	Data      []Feed `json:"data"`
+}
+
 // ListItemsByFeedIDRequest wraps parameters for listing items from a feed with user-specific like info.
 // Embeds FeedID, UserID, Limit, and Offset.
 type ListItemsByFeedIDRequest struct {
@@ -156,17 +163,17 @@ type ListCollectionsResponse struct {
 	Collections []Collection `json:"collections"`
 }
 
-// ListCollectionItemsResponse wraps a paginated list of items in a collection
-type ListCollectionItemsResponse struct {
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
-	TotalCount int64  `json:"total_count"`
-	Items      []Item `json:"items"`
-}
-
 // AddItemToCollectionResponse
 type AddItemToCollectionResponse struct {
 	AddedAt time.Time `json:"added_at"`
+}
+
+// ListCategoriesResponse
+type ListCategoriesResponse struct {
+	Limit      int32    `json:"limit"`
+	Offset     int32    `json:"offset"`
+	TotalCount int64    `json:"total_count"`
+	Categories []string `json:"categories"`
 }
 
 // Person represents an RSS‐feed author for documentation.

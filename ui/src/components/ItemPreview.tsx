@@ -1,7 +1,8 @@
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { GithubComRhajizadaGazetteInternalServiceItem as ItemModel } from "../api/data-contracts";
 import { useAuth } from "../context/AuthContext";
@@ -11,11 +12,11 @@ const MIN_HEIGHT = 100;
 
 interface ItemPreviewProps {
   item: ItemModel;
+  onUnlike?: () => Promise<void>;
 }
 
-export function ItemPreview({ item }: ItemPreviewProps) {
+export function ItemPreview({ item, onUnlike }: ItemPreviewProps) {
   const { api, logout } = useAuth();
-  const navigate = useNavigate();
   const [liked, setLiked] = useState<boolean>(item.liked ?? false);
   const [loading, setLoading] = useState<boolean>(false);
   const [showImage, setShowImage] = useState(false);
@@ -25,15 +26,19 @@ export function ItemPreview({ item }: ItemPreviewProps) {
     setLoading(true);
     try {
       if (liked) {
-        await api.itemsLikeDelete(item.id!, { format: "json" });
-        setLiked(false);
+        if (onUnlike) {
+          await onUnlike();
+          setLiked(false);
+        } else {
+          await api.itemsLikeDelete(item.id!, { format: "json" });
+          setLiked(false);
+        }
+        toast.success("removed from liked items");
       } else {
         await api.itemsLikeCreate(item.id!, { format: "json" });
         setLiked(true);
+        toast.success("added to liked items");
       }
-      toast.success(
-        liked ? "removed from liked items" : "added to liked items",
-      );
     } catch (err: any) {
       if (err.error === "Unauthorized") logout();
       else {
@@ -69,15 +74,13 @@ export function ItemPreview({ item }: ItemPreviewProps) {
        cursor-pointer
      "
     >
-      <CardContent
-        className="flex items-start break-words flex-1"
-        onClick={() => navigate(`/items/${item.id}`)}
-      >
-        {showImage && (
-          <img
-            src={item.image.url}
-            alt={item.image.title ?? item.title}
-            className="
+      <Link to={`/items/${item.id}`}>
+        <CardContent className="flex items-start break-words flex-1">
+          {showImage && (
+            <img
+              src={item.image.url}
+              alt={item.image.title ?? item.title}
+              className="
           w-1/3
           flex-shrink-0
           rounded-lg
@@ -85,34 +88,34 @@ export function ItemPreview({ item }: ItemPreviewProps) {
           h-auto
           object-contain
         "
-          />
-        )}
-        <div className="flex-1 break-words">
-          <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors">
-            {item.title}
-          </h3>
-
-          {item.description && (
-            <div
-              className="leading-7 [&:not(:first-child)]:mt-6"
-              dangerouslySetInnerHTML={{ __html: item.description }}
             />
           )}
+          <div className="flex-1 break-words">
+            <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors">
+              {item.title}
+            </h3>
 
-          {item.authors && item.authors?.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {item.authors.map((a, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 bg-gray-100 text-xs rounded-full"
-                >
-                  {a.name || a.email}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </CardContent>
+            {item.description && (
+              <div
+                className="leading-7 [&:not(:first-child)]:mt-6"
+                dangerouslySetInnerHTML={{ __html: item.description }}
+              />
+            )}
+
+            {(item.authors ?? []).filter(
+              (a) => a.name?.trim() || a.email?.trim(),
+            ).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {(item.authors ?? [])
+                  .filter((a) => a.name?.trim() || a.email?.trim())
+                  .map((a, i) => (
+                    <Badge key={i}>{a.name || a.email}</Badge>
+                  ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Link>
 
       <CardFooter className="mt-auto px-4 py-2 flex items-center justify-between">
         <button

@@ -83,25 +83,22 @@ export default function Feeds() {
       setSearch("");
       setSortKey("title");
       setSortAsc(true);
-      const reload = async () => {
-        const pageSize = 100;
-        let offset = 0;
-        let total = Infinity;
-        const acc: FeedModel[] = [];
-        while (offset < total) {
-          const res = await api.feedsList(
-            { subscribedOnly: false, limit: pageSize, offset },
-            { secure: true, format: "json" },
-          );
-          const chunk = res.data.feeds ?? [];
-          acc.push(...chunk);
-          total = res.data.total_count ?? chunk.length;
-          offset += chunk.length;
-          if (!chunk.length) break;
-        }
-        setAllFeeds(acc);
-      };
-      await reload();
+      const pageSize = 100;
+      let offset = 0;
+      let total = Infinity;
+      const acc: FeedModel[] = [];
+      while (offset < total) {
+        const res = await api.feedsList(
+          { subscribedOnly: false, limit: pageSize, offset },
+          { secure: true, format: "json" },
+        );
+        const chunk = res.data.feeds ?? [];
+        acc.push(...chunk);
+        total = res.data.total_count ?? chunk.length;
+        offset += chunk.length;
+        if (!chunk.length) break;
+      }
+      setAllFeeds(acc);
       setNewUrl("");
       toast.success("feed imported");
     } catch (err: any) {
@@ -137,22 +134,18 @@ export default function Feeds() {
   const pageItems = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const pages: (number | "ellipsis")[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else if (page <= 4) {
-    pages.push(1, 2, 3, 4, 5, "ellipsis", totalPages);
-  } else if (page > totalPages - 4) {
-    pages.push(
-      1,
-      "ellipsis",
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    );
-  } else {
-    pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages);
+  if (totalPages > 0) {
+    pages.push(1);
+    if (page > 3) pages.push("ellipsis");
+
+    const start = Math.max(2, page - 2);
+    const end = Math.min(totalPages - 1, page + 2);
+    for (let p = start; p <= end; p++) {
+      pages.push(p);
+    }
+
+    if (page < totalPages - 2) pages.push("ellipsis");
+    if (totalPages > 1) pages.push(totalPages);
   }
 
   return (
@@ -167,9 +160,7 @@ export default function Feeds() {
             </div>
           ) : (
             <>
-              {/* Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {/* Import */}
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="Feed URL"
@@ -192,7 +183,6 @@ export default function Feeds() {
                   </Button>
                 </div>
 
-                {/* Search & Sort */}
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="Search..."
@@ -227,7 +217,6 @@ export default function Feeds() {
                 </div>
               </div>
 
-              {/* Feed grid or empty */}
               {pageItems.length === 0 ? (
                 <p className="text-center">No feeds found.</p>
               ) : (
@@ -238,7 +227,6 @@ export default function Feeds() {
                 </div>
               )}
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-8 flex justify-center">
                   <Pagination>
@@ -251,7 +239,7 @@ export default function Feeds() {
                       </PaginationItem>
                       {pages.map((p, i) =>
                         p === "ellipsis" ? (
-                          <PaginationItem key={i}>
+                          <PaginationItem key={`e${i}`}>
                             <PaginationEllipsis />
                           </PaginationItem>
                         ) : (
