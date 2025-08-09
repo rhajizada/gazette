@@ -587,9 +587,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Generates an OPML file containing all current feeds and returns it as a downloadable file.",
-                "produces": [
-                    "application/xml"
-                ],
                 "tags": [
                     "Feeds"
                 ],

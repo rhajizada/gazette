@@ -69,7 +69,6 @@ func (h *Handler) ListFeeds(w http.ResponseWriter, r *http.Request) {
 // @Description  Generates an OPML file containing all current feeds and returns it as a downloadable file.
 // @Tags         Feeds
 // @Param        subscribedOnly  query     bool   false  "Only subscribed feeds"
-// @Produce      application/xml
 // @Success      200  {file}   string  "OPML file"
 // @Failure      400  {string} string
 // @Failure      401  {string} string

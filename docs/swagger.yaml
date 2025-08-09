@@ -722,8 +722,6 @@ paths:
         in: query
         name: subscribedOnly
         type: boolean
-      produces:
-      - application/xml
       responses:
         "200":
           description: OPML file
