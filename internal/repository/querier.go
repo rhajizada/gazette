@@ -38,7 +38,6 @@ type Querier interface {
 	DeleteUserByID(ctx context.Context, id uuid.UUID) error
 	DeleteUserFeedSubscription(ctx context.Context, arg DeleteUserFeedSubscriptionParams) error
 	DeleteUserLike(ctx context.Context, arg DeleteUserLikeParams) error
-	ExportFeedsByUserID(ctx context.Context, arg ExportFeedsByUserIDParams) ([]string, error)
 	GetCollectionByID(ctx context.Context, id uuid.UUID) (Collection, error)
 	GetCollectionItem(ctx context.Context, arg GetCollectionItemParams) (CollectionItem, error)
 	GetFeedByFeedLink(ctx context.Context, feedLink string) (Feed, error)

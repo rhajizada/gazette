@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/mmcdole/gofeed"
+	"github.com/rhajizada/gazette/internal/opml"
 	"github.com/rhajizada/gazette/internal/repository"
 	"github.com/rhajizada/gazette/internal/typeext"
 	"github.com/rhajizada/gazette/internal/workers"
@@ -98,25 +99,75 @@ func (s *Service) ListFeeds(ctx context.Context, r ListFeedsRequest) (*ListFeeds
 }
 
 // ExportFeeds returns list of feed URLs, optionally only subscribed.
-func (s *Service) ExportFeeds(ctx context.Context, r ExportFeedsRequest) ([]string, error) {
-	var feeds []string
+func (s *Service) ExportFeeds(ctx context.Context, r ExportFeedsRequest) (string, error) {
+	var total int64
 	var err error
-	feeds, err = s.Repo.ExportFeedsByUserID(ctx, repository.ExportFeedsByUserIDParams{
-		UserID:  r.UserID,
-		Column2: r.SubscbedOnly,
-	})
+	if r.SubscbedOnly {
+		total, err = s.Repo.CountFeedsByUserID(ctx, r.UserID)
+	} else {
+		total, err = s.Repo.CountFeeds(ctx)
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			feeds = make([]string, 0)
+			total = 0
 		} else {
-			return nil, NewError(
-				"failed to export feeds",
+			return "", NewError(
+				"failed to count feeds",
 				http.StatusInternalServerError,
 			)
 		}
 	}
 
-	return feeds, nil
+	var rows []repository.ListFeedsByUserIDRow
+
+	if total == 0 {
+		rows = make([]repository.ListFeedsByUserIDRow, 0)
+	} else {
+		rows, err = s.Repo.ListFeedsByUserID(ctx, repository.ListFeedsByUserIDParams{
+			UserID:  r.UserID,
+			Column2: r.SubscbedOnly,
+			Offset:  0,
+			Limit:   int32(total),
+		})
+		if err != nil {
+			return "", NewError(
+				"failed to list feeds",
+				http.StatusInternalServerError,
+			)
+		}
+	}
+
+	feeds := make([]repository.Feed, len(rows))
+	for i, row := range rows {
+		auths := make(Authors, len(row.Authors))
+		for j, a := range row.Authors {
+			auths[j] = Person{Name: a.Name, Email: a.Email}
+		}
+
+		feeds[i] = repository.Feed{
+			ID:              row.ID,
+			Title:           row.Title,
+			Description:     row.Description,
+			Link:            row.Link,
+			FeedLink:        row.FeedLink,
+			Links:           row.Links,
+			UpdatedParsed:   row.UpdatedParsed,
+			PublishedParsed: row.PublishedParsed,
+			Authors:         row.Authors,
+			Language:        row.Language,
+			Image:           row.Image,
+			Copyright:       row.Copyright,
+			Generator:       row.Generator,
+			Categories:      row.Categories,
+			FeedType:        row.FeedType,
+			FeedVersion:     row.FeedVersion,
+			CreatedAt:       row.CreatedAt,
+			LastUpdatedAt:   row.LastUpdatedAt,
+		}
+	}
+
+	exportData := opml.FeedsToOPML("Gazette feeds", feeds)
+	return exportData.ToXML()
 }
 
 // CreateFeed creates a feed if needed, enqueues a sync task, and subscribes the user.

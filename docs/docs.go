@@ -586,14 +586,14 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns a CSV list of all feeds, or only those the user is subscribed to.",
+                "description": "Generates an OPML file containing all current feeds and returns it as a downloadable file.",
                 "produces": [
-                    "text/csv"
+                    "application/xml"
                 ],
                 "tags": [
                     "Feeds"
                 ],
-                "summary": "Export feeds",
+                "summary": "Export feeds as OPML",
                 "parameters": [
                     {
                         "type": "boolean",
@@ -604,13 +604,43 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of feeds",
+                        "description": "OPML file",
                         "schema": {
                             "type": "file"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
                         "schema": {
                             "type": "string"
                         }
