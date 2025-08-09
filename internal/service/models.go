@@ -87,6 +87,13 @@ type Feed struct {
 	SubscribedAt    *time.Time `json:"subscribed_at,omitempty"`
 }
 
+// ImportFeedsResponse is the response contract for OPML imports.
+type ImportFeedsResponse struct {
+	Processed int    `json:"processed"`
+	Skipped   int    `json:"skipped"`
+	Data      []Feed `json:"data"`
+}
+
 // ListItemsByFeedIDRequest wraps parameters for listing items from a feed with user-specific like info.
 // Embeds FeedID, UserID, Limit, and Offset.
 type ListItemsByFeedIDRequest struct {

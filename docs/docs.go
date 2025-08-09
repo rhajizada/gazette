@@ -651,6 +651,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/feeds/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Imports feeds from an OPML file and subscribes the user to each feed found.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Feeds"
+                ],
+                "summary": "Import feeds from OPML",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "OPML file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.ImportFeedsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/feeds/{feedID}": {
             "get": {
                 "security": [
@@ -1412,6 +1461,23 @@ const docTemplate = `{
                 },
                 "updated_parsed": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_rhajizada_gazette_internal_service.ImportFeedsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_rhajizada_gazette_internal_service.Feed"
+                    }
+                },
+                "processed": {
+                    "type": "integer"
+                },
+                "skipped": {
+                    "type": "integer"
                 }
             }
         },

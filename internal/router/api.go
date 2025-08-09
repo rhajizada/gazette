@@ -27,6 +27,7 @@ func RegisterAPI(h *handler.Handler) *http.ServeMux {
 	router.HandleFunc("GET /feeds", h.ListFeeds)
 	router.HandleFunc("POST /feeds", h.CreateFeed)
 	router.HandleFunc("GET /feeds/export", h.ExportFeeds)
+	router.HandleFunc("POST /feeds/import", h.ImportFeeds)
 	router.HandleFunc("GET /feeds/{feedID}", h.GetFeedByID)
 	router.HandleFunc("DELETE /feeds/{feedID}", h.DeleteFeedByID)
 	router.HandleFunc("PUT /feeds/{feedID}/subscribe", h.SubscribeToFeed)

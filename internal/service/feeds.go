@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -253,6 +256,69 @@ func (s *Service) CreateFeed(ctx context.Context, r CreateFeedRequest) (*Feed, e
 		Subscribed:      true,
 		SubscribedAt:    &sub.SubscribedAt,
 	}, nil
+}
+
+// ImportFeeds parses OPML from r and imports feeds for the given user.
+// It returns counts for processed/ skipped and the successfully created feeds.
+func (s *Service) ImportFeeds(ctx context.Context, userID uuid.UUID, r io.Reader) (*ImportFeedsResponse, error) {
+	doc, err := opml.Parse(r)
+	if err != nil {
+		return nil, NewError("invalid opml", http.StatusBadRequest)
+	}
+
+	urlSet := make(map[string]struct{}, 128)
+	var urls []string
+	var walk func(items []opml.Outline)
+	walk = func(items []opml.Outline) {
+		for _, o := range items {
+			if u := strings.TrimSpace(o.XMLURL); u != "" {
+				if _, seen := urlSet[u]; !seen {
+					urlSet[u] = struct{}{}
+					urls = append(urls, u)
+				}
+			}
+			if len(o.Outlines) > 0 {
+				walk(o.Outlines)
+			}
+		}
+	}
+	walk(doc.Body.Outlines)
+
+	res := &ImportFeedsResponse{
+		Data: make([]Feed, 0, len(urls)),
+	}
+	for _, feedURL := range urls {
+		f, err := s.CreateFeed(ctx, CreateFeedRequest{
+			UserID:  userID,
+			FeedURL: feedURL,
+		})
+		if err != nil {
+			// Treat known “soft” failures as skipped (e.g., conflict / bad request)
+			// Support either a ServiceError type or a StatusCode() interface.
+			type withStatus interface{ StatusCode() int }
+			var ws withStatus
+			if errors.As(err, &ws) {
+				status := ws.StatusCode()
+				if status == http.StatusConflict || status == http.StatusBadRequest {
+					res.Skipped++
+					continue
+				}
+			}
+			var se *ServiceError
+			if errors.As(err, &se) {
+				if se.Code == http.StatusConflict || se.Code == http.StatusBadRequest {
+					res.Skipped++
+					continue
+				}
+			}
+			res.Skipped++
+			continue
+		}
+		res.Processed++
+		res.Data = append(res.Data, *f)
+	}
+
+	return res, nil
 }
 
 // GetFeed retrieves a feed and the user's subscription status.

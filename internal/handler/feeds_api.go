@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -155,6 +156,58 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(feed)
+}
+
+// ImportFeeds imports feed subscriptions from an OPML file.
+// @Summary      Import feeds from OPML
+// @Description  Imports feeds from an OPML file and subscribes the user to each feed found.
+// @Tags         Feeds
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file  formData  file  true  "OPML file"
+// @Success      200   {object}  service.ImportFeedsResponse
+// @Failure      400   {object}  string
+// @Failure      500   {object}  string
+// @Security     BearerAuth
+// @Router       /api/feeds/import [post]
+func (h *Handler) ImportFeeds(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetUserClaims(r)
+	var userID uuid.UUID
+	if claims != nil {
+		userID = claims.UserID
+	}
+
+	var reader io.Reader
+
+	if err := r.ParseMultipartForm(10 << 20); err == nil { // 10MB memory buffer
+		file, _, ferr := r.FormFile("file")
+		if ferr == nil {
+			defer file.Close()
+			reader = file
+		}
+	}
+
+	if reader == nil {
+		if r.Body == nil {
+			http.Error(w, "missing body", http.StatusBadRequest)
+			return
+		}
+		reader = r.Body
+	}
+
+	res, err := h.Service.ImportFeeds(r.Context(), userID, reader)
+	if err != nil {
+		var serviceErr service.ServiceError
+		if errors.As(err, &serviceErr) {
+			http.Error(w, serviceErr.Error(), int(serviceErr.Code))
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to import feeds: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 // GetFeedByID returns one feed with subscription info.
